@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Catálogo de Produtos</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{--bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#6b7280;--primary:#2563eb;--danger:#dc2626;--ok:#15803d;--border:#d1d5db}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{position:sticky;top:0;z-index:5;background:#111827;color:#fff;padding:14px 16px}
+header h1{font-size:20px;margin:0 0 4px}header p{margin:0;color:#d1d5db;font-size:13px}
+nav{position:sticky;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border-top:1px solid var(--border)}
+nav button{border:0;background:#fff;padding:12px 6px;font-size:13px;color:#374151}
+nav button.active{color:var(--primary);font-weight:700}
+main{max-width:720px;margin:auto;padding:16px 16px 90px}
+.page{display:none}.page.active{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px #00000008}
+h2{font-size:20px;margin:0 0 12px}h3{font-size:17px;margin:0 0 10px}
+label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}
+input{width:100%;padding:13px;border:1px solid var(--border);border-radius:10px;font-size:16px;background:#fff}
+button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:700;cursor:pointer}
+.primary{background:var(--primary);color:#fff}.secondary{background:#e5e7eb;color:#111827}.danger{background:#fee2e2;color:#991b1b}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:130px}
+.big{width:100%;padding:15px;font-size:17px}
+.status{padding:12px;border-radius:10px;margin-top:10px;display:none}
+.status.show{display:block}.status.ok{background:#dcfce7;color:#166534}.status.warn{background:#fef3c7;color:#92400e}.status.err{background:#fee2e2;color:#991b1b}
+.product{display:grid;grid-template-columns:76px 1fr;gap:12px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:10px;margin-top:9px}
+.product img{width:76px;height:76px;border-radius:10px;object-fit:cover;background:#e5e7eb}
+.product .meta{font-size:12px;color:var(--muted);word-break:break-all}
+#reader{width:100%;overflow:hidden;border-radius:14px;background:#000;min-height:100px}
+#reader video{border-radius:14px}
+.scanner-actions{display:flex;gap:8px;margin-top:10px}.scanner-actions button{flex:1}
+.camera-note{font-size:12px;color:var(--muted);margin-top:8px}
+.preview{max-width:180px;max-height:180px;border-radius:12px;object-fit:cover;display:none;margin-top:10px}
+.empty{color:var(--muted);text-align:center;padding:20px}
+.hidden{display:none!important}
+.modal{position:fixed;inset:0;background:#000b;z-index:20;display:none;align-items:flex-end;justify-content:center}
+.modal.open{display:flex}
+.sheet{background:#fff;width:100%;max-width:720px;border-radius:20px 20px 0 0;padding:16px;max-height:92vh;overflow:auto}
+.sheet h2{margin-bottom:8px}
+.small{font-size:12px;color:var(--muted)}
+.file{padding:10px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>📦 Catálogo de Produtos</h1>
+  <p>Escaneie, consulte e cadastre produtos pelo código de barras.</p>
+</header>
+
+<main>
+  <section id="page-scan" class="page active">
+    <div class="card">
+      <h2>🔎 Escanear produto</h2>
+      <button class="primary big" id="openScanMain">📷 Abrir câmera e escanear</button>
+      <div class="camera-note">A câmera traseira será priorizada. O navegador pedirá permissão na primeira vez.</div>
+      <label for="mainCode">Ou digite o código de barras</label>
+      <div class="row">
+        <input id="mainCode" inputmode="numeric" placeholder="Ex.: 7891234567890">
+        <button class="secondary" id="lookupMain">Consultar</button>
+      </div>
+      <div id="mainStatus" class="status"></div>
+    </div>
+    <div id="mainResult" class="card hidden"></div>
+  </section>
+
+  <section id="page-register" class="page">
+    <div class="card">
+      <h2>➕ Cadastrar produto</h2>
+      <button class="primary big" id="openScanRegister">📷 Ler código e preencher cadastro</button>
+      <div class="camera-note">Aponte a câmera para o código de barras. O código será preenchido e o nome e a imagem serão buscados automaticamente quando disponíveis.</div>
+
+      <label for="regCode">Código de barras</label>
+      <input id="regCode" inputmode="numeric" placeholder="Digite ou escaneie o código">
+
+      <label for="regName">Nome do produto</label>
+      <input id="regName" placeholder="Nome do produto">
+
+      <label for="regImage">Imagem do produto</label>
+      <input id="regImage" type="file" accept="image/*" class="file">
+      <img id="regPreview" class="preview" alt="Prévia da imagem">
+
+      <div class="row" style="margin-top:12px">
+        <button class="secondary" id="lookupRegister">🔎 Buscar produto</button>
+        <button class="primary" id="saveRegister">💾 Cadastrar</button>
+      </div>
+      <div id="regStatus" class="status"></div>
+    </div>
+  </section>
+
+  <section id="page-list" class="page">
+    <div class="card">
+      <h2>📋 Produtos cadastrados</h2>
+      <input id="listSearch" placeholder="Pesquisar por nome ou código">
+      <div id="productList"></div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-page="scan" class="active">🔎 Escanear</button>
+  <button data-page="register">➕ Cadastrar</button>
+  <button data-page="list">📋 Catálogo</button>
+</nav>
+
+<div id="scannerModal" class="modal">
+  <div class="sheet">
+    <h2>📷 Escanear código</h2>
+    <div class="small">Aponte a câmera para o código de barras.</div>
+    <div id="reader" style="margin-top:12px"></div>
+    <div id="scanStatus" class="status"></div>
+    <div class="scanner-actions">
+      <button class="secondary" id="closeScanner">Fechar</button>
+      <button class="primary" id="retryScanner">🔄 Tentar novamente</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = "catalogo_produtos_v1";
+let products = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+let scanner = null;
+let scannerTarget = "main";
+let scannerRunning = false;
+let pendingImageData = "";
+
+const $ = id => document.getElementById(id);
+const normalizeCode = v => String(v || "").replace(/\D/g,"").trim();
+
+function saveAll(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(products)); renderList(); }
+
+function showStatus(el, msg, type="ok"){
+  el.textContent = msg;
+  el.className = "status show " + type;
+}
+function hideStatus(el){ el.className = "status"; el.textContent=""; }
+
+function findProduct(code){
+  code = normalizeCode(code);
+  return products.find(p => normalizeCode(p.code) === code);
+}
+
+function goPage(name){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  $("page-"+name).classList.add("active");
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active", b.dataset.page===name));
+  if(name==="list") renderList();
+}
+
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>goPage(b.dataset.page)));
+
+async function lookupOnline(code){
+  code = normalizeCode(code);
+  if(!code) return null;
+  try{
+    const r = await fetch("https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json", {headers:{Accept:"application/json"}});
+    if(!r.ok) return null;
+    const d = await r.json();
+    if(d.status !== 1 || !d.product) return null;
+    const p = d.product;
+    return {
+      name: p.product_name || p.product_name_pt || p.generic_name || "",
+      image: p.image_front_url || p.image_url || ""
+    };
+  }catch(e){ return null; }
+}
+
+function fillRegister(code, online){
+  $("regCode").value = code;
+  if(online){
+    if(online.name) $("regName").value = online.name;
+    if(online.image && !pendingImageData) {
+      $("regPreview").src = online.image;
+      $("regPreview").style.display = "block";
+      $("regPreview").dataset.remote = online.image;
+    }
+  }
+}
+
+async function processCode(code, target){
+  code = normalizeCode(code);
+  if(!code) return;
+  const local = findProduct(code);
+
+  if(target === "register"){
+    $("regCode").value = code;
+    if(local){
+      showStatus($("regStatus"), 'produto ja cadastrado "' + local.name + '"', "warn");
+      $("regName").value = local.name || "";
+      if(local.image){ $("regPreview").src=local.image; $("regPreview").style.display="block"; }
+      return;
+    }
+    showStatus($("regStatus"), "Código lido. Buscando o produto na internet...", "ok");
+    const online = await lookupOnline(code);
+    if(online){
+      fillRegister(code, online);
+      showStatus($("regStatus"), online.name ? "Produto encontrado e preenchido automaticamente." : "Produto encontrado, mas sem nome disponível.", "ok");
+    }else{
+      showStatus($("regStatus"), "Código lido. Não encontrei o produto na internet; digite o nome para cadastrar.", "warn");
+    }
+    goPage("register");
+    return;
+  }
+
+  $("mainCode").value = code;
+  if(local){
+    renderMainLocal(local);
+    return;
+  }
+  showStatus($("mainStatus"), "Consultando o produto na internet...", "ok");
+  const online = await lookupOnline(code);
+  if(online){
+    $("mainResult").classList.remove("hidden");
+    $("mainResult").innerHTML = `
+      <h3>Produto encontrado</h3>
+      <div class="product">
+        ${online.image ? `<img src="${escapeHtml(online.image)}" alt="">` : `<div style="width:76px;height:76px;background:#e5e7eb;border-radius:10px"></div>`}
+        <div><strong>${escapeHtml(online.name || "Sem nome")}</strong><div class="meta">Código: ${escapeHtml(code)}</div></div>
+      </div>
+      <button class="primary big" style="margin-top:12px" id="useFoundProduct">➕ Cadastrar este produto</button>`;
+    $("useFoundProduct").onclick=()=>{
+      goPage("register");
+      fillRegister(code, online);
+      hideStatus($("regStatus"));
+    };
+    showStatus($("mainStatus"), "Produto encontrado.", "ok");
+  }else{
+    $("mainResult").classList.remove("hidden");
+    $("mainResult").innerHTML = `<h3>Produto não encontrado</h3><p class="small">Não encontrei esse código na internet. Você pode cadastrar manualmente.</p><button class="primary big" id="registerUnknown">➕ Cadastrar produto</button>`;
+    $("registerUnknown").onclick=()=>{goPage("register");$("regCode").value=code;};
+    showStatus($("mainStatus"), "Não encontrei esse produto na internet.", "warn");
+  }
+}
+
+function renderMainLocal(p){
+  $("mainResult").classList.remove("hidden");
+  $("mainResult").innerHTML = `
+    <div class="status show warn">produto ja cadastrado "${escapeHtml(p.name)}"</div>
+    <div class="product">
+      ${p.image ? `<img src="${escapeHtml(p.image)}" alt="">` : `<div style="width:76px;height:76px;background:#e5e7eb;border-radius:10px"></div>`}
+      <div><strong>${escapeHtml(p.name)}</strong><div class="meta">Código: ${escapeHtml(p.code)}</div></div>
+    </div>`;
+  hideStatus($("mainStatus"));
+}
+
+$("lookupMain").onclick=()=>processCode($("mainCode").value,"main");
+$("mainCode").addEventListener("keydown",e=>{if(e.key==="Enter")processCode(e.target.value,"main")});
+$("lookupRegister").onclick=async()=>{
+  const code=normalizeCode($("regCode").value);
+  if(!code){showStatus($("regStatus"),"Digite ou escaneie um código.","warn");return;}
+  await processCode(code,"register");
+};
+
+$("regImage").addEventListener("change", async e=>{
+  const file=e.target.files?.[0];
+  if(!file)return;
+  try{
+    pendingImageData=await compressImage(file);
+    $("regPreview").src=pendingImageData;
+    $("regPreview").style.display="block";
+    delete $("regPreview").dataset.remote;
+  }catch(err){showStatus($("regStatus"),"Não foi possível carregar a imagem.","err")}
+});
+
+function compressImage(file){
+  return new Promise((resolve,reject)=>{
+    const img=new Image(), url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const max=900, scale=Math.min(1,max/Math.max(img.width,img.height));
+      const c=document.createElement("canvas");
+      c.width=Math.max(1,Math.round(img.width*scale)); c.height=Math.max(1,Math.round(img.height*scale));
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg",.8));
+    };
+    img.onerror=reject; img.src=url;
+  });
+}
+
+$("saveRegister").onclick=()=>{
+  const code=normalizeCode($("regCode").value);
+  const name=$("regName").value.trim();
+  if(!code){showStatus($("regStatus"),"Informe ou escaneie o código de barras.","warn");return;}
+  const existing=findProduct(code);
+  if(existing){showStatus($("regStatus"),'produto ja cadastrado "'+existing.name+'"',"warn");return;}
+  if(!name){showStatus($("regStatus"),"Informe o nome do produto.","warn");return;}
+  const img=pendingImageData || $("regPreview").dataset.remote || "";
+  products.push({id:crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),code,name,image:img,createdAt:new Date().toISOString()});
+  saveAll();
+  showStatus($("regStatus"),'Produto cadastrado: "'+name+'"',"ok");
+  $("regName").value=""; $("regCode").value=""; $("regImage").value=""; pendingImageData="";
+  $("regPreview").style.display="none"; delete $("regPreview").dataset.remote;
+};
+
+function renderList(){
+  const q=$("listSearch").value.trim().toLowerCase();
+  const arr=products.filter(p=>!q || p.name.toLowerCase().includes(q) || p.code.includes(q));
+  if(!arr.length){$("productList").innerHTML='<div class="empty">Nenhum produto cadastrado.</div>';return;}
+  $("productList").innerHTML=arr.map(p=>`
+    <div class="product">
+      ${p.image?`<img src="${escapeHtml(p.image)}" alt="">`:`<div style="width:76px;height:76px;background:#e5e7eb;border-radius:10px"></div>`}
+      <div><strong>${escapeHtml(p.name)}</strong><div class="meta">${escapeHtml(p.code)}</div>
+      <button class="danger" style="margin-top:7px;padding:7px 10px;font-size:12px" data-delete="${escapeHtml(p.id)}">Excluir</button></div>
+    </div>`).join("");
+  document.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>{
+    const p=products.find(x=>x.id===b.dataset.delete);
+    if(p && confirm('Excluir "'+p.name+'"?')){products=products.filter(x=>x.id!==p.id);saveAll();}
+  });
+}
+$("listSearch").addEventListener("input",renderList);
+
+function escapeHtml(s){
+  return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+
+async function ensureCameraPermission(){
+  if(!window.isSecureContext || !navigator.mediaDevices?.getUserMedia){
+    throw new Error("CAMERA_SECURE");
+  }
+  const stream=await navigator.mediaDevices.getUserMedia({
+    video:{facingMode:{ideal:"environment"}},audio:false
+  });
+  stream.getTracks().forEach(t=>t.stop());
+}
+
+async function startScanner(target){
+  scannerTarget=target;
+  $("scannerModal").classList.add("open");
+  hideStatus($("scanStatus"));
+  $("reader").innerHTML="";
+  if(!window.Html5Qrcode){
+    showStatus($("scanStatus"),"O leitor de código não carregou. Verifique sua internet e tente novamente.","err");return;
+  }
+  try{
+    await ensureCameraPermission();
+    scanner=new Html5Qrcode("reader");
+    scannerRunning=true;
+    await scanner.start(
+      {facingMode:{ideal:"environment"}},
+      {fps:12,qrbox:{width:280,height:140},aspectRatio:1.777},
+      async decoded=>{
+        const code=normalizeCode(decoded);
+        if(!code)return;
+        await stopScanner();
+        await processCode(code,scannerTarget);
+      },
+      ()=>{}
+    );
+    showStatus($("scanStatus"),"Câmera ativa. Aponte para o código de barras.","ok");
+  }catch(e){
+    scannerRunning=false;
+    const msg=e?.message==="CAMERA_SECURE"
+      ? "A câmera precisa de HTTPS (ou localhost). Se você abriu o arquivo HTML diretamente pelo celular, publique o site em HTTPS."
+      : (e?.name==="NotAllowedError" ? "Permissão da câmera foi negada. Autorize a câmera nas permissões do navegador e tente novamente." : "Não consegui abrir a câmera. Verifique se o navegador tem acesso à câmera e tente novamente.");
+    showStatus($("scanStatus"),msg,"err");
+    if(scanner){try{await scanner.clear()}catch(_){} scanner=null;}
+  }
+}
+
+async function stopScanner(){
+  if(scanner){
+    try{if(scannerRunning) await scanner.stop()}catch(_){}
+    try{await scanner.clear()}catch(_){}
+  }
+  scanner=null; scannerRunning=false;
+  $("reader").innerHTML="";
+  $("scannerModal").classList.remove("open");
+}
+
+$("openScanMain").onclick=()=>startScanner("main");
+$("openScanRegister").onclick=()=>startScanner("register");
+$("closeScanner").onclick=stopScanner;
+$("retryScanner").onclick=async()=>{await stopScanner();await startScanner(scannerTarget)};
+window.addEventListener("beforeunload",()=>{if(scanner)try{scanner.stop()}catch(_){}});
+renderList();
+</script>
+</body>
+</html>
