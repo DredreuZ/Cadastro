@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Catálogo de Produtos</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f3f4f6;color:#111827}
+header{background:#111827;color:white;padding:18px 16px;position:sticky;top:0;z-index:5}header h1{margin:0;font-size:21px}
+nav{display:flex;gap:8px;margin-top:12px}nav button{flex:1;border:0;border-radius:10px;padding:11px;background:#374151;color:#fff;font-weight:700}
+nav button.active{background:#fff;color:#111827}.wrap{max-width:760px;margin:auto;padding:16px}
+.card{background:white;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 12px #0000000d}
+button,.filelabel{cursor:pointer}.primary{width:100%;border:0;border-radius:12px;padding:14px;background:#111827;color:#fff;font-size:16px;font-weight:800}
+.secondary{border:1px solid #d1d5db;background:white;color:#111827;border-radius:10px;padding:11px 14px;font-weight:700}
+input{width:100%;padding:13px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;margin-top:6px}
+label{display:block;font-weight:700;margin:12px 0}.muted{color:#6b7280;font-size:14px}
+#reader{width:100%;overflow:hidden;border-radius:14px;background:#111;min-height:260px}
+#reader video{width:100%!important;border-radius:14px}.status{padding:12px;border-radius:10px;background:#f3f4f6;margin:10px 0;font-size:14px}
+.success{background:#dcfce7;color:#166534}.warn{background:#fef3c7;color:#92400e}.danger{background:#fee2e2;color:#991b1b}
+.product{display:flex;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid #eee}.product img{width:64px;height:64px;border-radius:10px;object-fit:contain;background:#f3f4f6}.product b{display:block}.hidden{display:none!important}
+.actions{display:flex;gap:8px;margin-top:12px}.actions>*{flex:1}.preview{max-width:140px;max-height:140px;display:block;border-radius:12px;margin-top:8px}
+.empty{text-align:center;padding:30px;color:#6b7280}
+.small{font-size:12px;color:#6b7280}
+</style>
+</head>
+<body>
+<header>
+<h1>📦 Catálogo de Produtos</h1>
+<nav>
+<button id="tabScan" class="active">📷 Escanear</button>
+<button id="tabList">📋 Produtos</button>
+<button id="tabAdd">➕ Cadastrar</button>
+</nav>
+</header>
+
+<main class="wrap">
+<section id="scanPage">
+<div class="card">
+<h2>Escanear código</h2>
+<p class="muted">Aponte a câmera para o código de barras. O sistema procura primeiro nos seus produtos e depois na internet.</p>
+<div id="reader"></div>
+<div id="scanStatus" class="status">Toque em “Iniciar câmera”.</div>
+<div class="actions">
+<button class="primary" id="startBtn">📷 Iniciar câmera</button>
+<button class="secondary" id="stopBtn">Parar</button>
+</div>
+<div class="card" style="margin-top:14px;padding:12px">
+<label>Código digitado
+<input id="manualCode" inputmode="numeric" placeholder="Ex.: 7894900011517"></label>
+<button class="secondary" id="lookupBtn" style="width:100%">🔎 Procurar código</button>
+</div>
+</div>
+<div id="result"></div>
+</section>
+
+<section id="listPage" class="hidden">
+<div class="card">
+<h2>Produtos cadastrados</h2>
+<input id="search" placeholder="Pesquisar por nome ou código...">
+<div id="list"></div>
+</div>
+</section>
+
+<section id="addPage" class="hidden">
+<div class="card">
+<h2>Cadastrar produto</h2>
+<div id="addStatus"></div>
+<label>Código de barras<input id="code" inputmode="numeric" placeholder="EAN/GTIN"></label>
+<label>Nome do produto<input id="name" placeholder="Nome"></label>
+<label>Imagem
+<input id="image" type="file" accept="image/*">
+<img id="preview" class="preview hidden">
+</label>
+<button class="primary" id="saveBtn">💾 Salvar produto</button>
+</div>
+</section>
+</main>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script>
+const KEY="catalogo_produtos_v1";
+let products=JSON.parse(localStorage.getItem(KEY)||"[]");
+let scanner=null, scanning=false;
+
+const $=id=>document.getElementById(id);
+function saveAll(){localStorage.setItem(KEY,JSON.stringify(products))}
+function normalizeCode(v){return (v||"").replace(/\\D/g,"")}
+function findCode(code){return products.find(p=>p.code===normalizeCode(code))}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function setStatus(el,msg,type=""){el.innerHTML=msg;el.className="status "+type}
+
+function showPage(page){
+  ["scanPage","listPage","addPage"].forEach(x=>$(x).classList.toggle("hidden",x!==page));
+  $("tabScan").classList.toggle("active",page==="scanPage");
+  $("tabList").classList.toggle("active",page==="listPage");
+  $("tabAdd").classList.toggle("active",page==="addPage");
+  if(page==="listPage") renderList();
+}
+$("tabScan").onclick=()=>showPage("scanPage");
+$("tabList").onclick=()=>showPage("listPage");
+$("tabAdd").onclick=()=>showPage("addPage");
+
+function renderList(){
+ const q=($("search").value||"").toLowerCase();
+ const arr=products.filter(p=>(p.name+" "+p.code).toLowerCase().includes(q));
+ $("list").innerHTML=arr.length?arr.map(p=>`
+ <div class="product">
+  ${p.image?`<img src="${p.image}">`:`<div style="width:64px;height:64px;border-radius:10px;background:#f3f4f6;display:grid;place-items:center">📦</div>`}
+  <div style="flex:1"><b>${esc(p.name)}</b><span class="small">${esc(p.code)}</span></div>
+  <button class="secondary" onclick="removeProduct('${esc(p.code)}')">Excluir</button>
+ </div>`).join(""):`<div class="empty">Nenhum produto cadastrado.</div>`;
+}
+$("search").oninput=renderList;
+window.removeProduct=code=>{if(confirm("Excluir este produto?")){products=products.filter(p=>p.code!==code);saveAll();renderList()}};
+
+async function lookup(code){
+ code=normalizeCode(code);
+ if(!code){setStatus($("scanStatus"),"Informe um código válido.","warn");return}
+ const local=findCode(code);
+ if(local){showExisting(local);return}
+ setStatus($("scanStatus"),"Código encontrado. Consultando a internet…");
+ try{
+   const r=await fetch("https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json");
+   const data=await r.json();
+   if(data.status===1 && data.product){
+     const p=data.product;
+     const name=p.product_name_pt||p.product_name||p.generic_name_pt||p.generic_name||"Produto sem nome";
+     const image=p.image_front_url||p.image_url||"";
+     showNew(code,name,image);
+     setStatus($("scanStatus"),"Produto encontrado na internet. Confira os dados antes de cadastrar.","success");
+   }else{
+     showNew(code,"", "");
+     setStatus($("scanStatus"),"Código não encontrado na base consultada. Digite o nome e cadastre manualmente.","warn");
+   }
+ }catch(e){
+   showNew(code,"","");
+   setStatus($("scanStatus"),"Não foi possível consultar a internet. Você pode cadastrar manualmente.","warn");
+ }
+}
+
+function showExisting(p){
+ $("result").innerHTML=`<div class="card">
+ <div class="status danger">⚠️ <b>Produto já cadastrado: ${esc(p.name)}</b></div>
+ <p><b>Código:</b> ${esc(p.code)}</p>
+ ${p.image?`<img class="preview" src="${p.image}">`:""}
+ </div>`;
+}
+function showNew(code,name,image){
+ $("result").innerHTML=`<div class="card">
+ <h3>Produto pronto para cadastro</h3>
+ <label>Código<input id="rCode" value="${esc(code)}" readonly></label>
+ <label>Nome<input id="rName" value="${esc(name)}" placeholder="Digite o nome"></label>
+ ${image?`<img class="preview" src="${image}" id="rImg">`:""}
+ <label>Imagem do produto<input id="rFile" type="file" accept="image/*"></label>
+ <button class="primary" id="registerResult">💾 Cadastrar produto</button>
+ </div>`;
+ $("registerResult").onclick=async()=>{
+   const c=normalizeCode($("rCode").value), n=$("rName").value.trim();
+   if(!c||!n){alert("Preencha código e nome.");return}
+   if(findCode(c)){showExisting(findCode(c));return}
+   let img=image||"";
+   if($("rFile").files[0]) img=await fileToDataUrl($("rFile").files[0]);
+   products.push({code:c,name:n,image:img,createdAt:new Date().toISOString()});saveAll();
+   $("result").innerHTML=`<div class="card"><div class="status success">✅ Produto <b>${esc(n)}</b> cadastrado com sucesso!</div></div>`;
+   renderList();
+ };
+}
+function fileToDataUrl(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
+
+$("lookupBtn").onclick=()=>lookup($("manualCode").value);
+$("manualCode").addEventListener("keydown",e=>{if(e.key==="Enter")lookup(e.target.value)});
+
+$("startBtn").onclick=async()=>{
+ if(scanning)return;
+ if(!window.isSecureContext){setStatus($("scanStatus"),"A câmera do navegador precisa de HTTPS (ou localhost).","danger");return}
+ try{
+  scanner=new Html5Qrcode("reader");
+  await scanner.start({facingMode:{exact:"environment"}},{fps:10,qrbox:{width:280,height:120},formatsToSupport:[
+    Html5QrcodeSupportedFormats.EAN_13,Html5QrcodeSupportedFormats.EAN_8,
+    Html5QrcodeSupportedFormats.UPC_A,Html5QrcodeSupportedFormats.UPC_E,
+    Html5QrcodeSupportedFormats.CODE_128
+  ]},decoded=>{if(scanning){scanning=false;scanner.stop().catch(()=>{});lookup(decoded)}},()=>{});
+  scanning=true;setStatus($("scanStatus"),"📷 Câmera ativa. Aponte para o código de barras.","success");
+ }catch(e){setStatus($("scanStatus"),"Não foi possível abrir a câmera. Verifique a permissão do navegador.","danger")}
+};
+$("stopBtn").onclick=async()=>{if(scanner&&scanning){scanning=false;try{await scanner.stop()}catch(e){}}setStatus($("scanStatus"),"Câmera parada.")};
+
+$("saveBtn").onclick=async()=>{
+ const code=normalizeCode($("code").value),name=$("name").value.trim();
+ if(!code||!name){$("addStatus").innerHTML='<div class="status warn">Preencha código e nome.</div>';return}
+ const old=findCode(code);if(old){$("addStatus").innerHTML=`<div class="status danger">⚠️ Produto já cadastrado: <b>${esc(old.name)}</b></div>`;return}
+ let image="";if($("image").files[0])image=await fileToDataUrl($("image").files[0]);
+ products.push({code,name,image,createdAt:new Date().toISOString()});saveAll();
+ $("addStatus").innerHTML='<div class="status success">✅ Produto cadastrado com sucesso!</div>';
+ $("code").value="";$("name").value="";$("image").value="";$("preview").classList.add("hidden");
+};
+$("image").onchange=async e=>{if(e.target.files[0]){$("preview").src=await fileToDataUrl(e.target.files[0]);$("preview").classList.remove("hidden")}};
+</script>
+</body>
+</html>
