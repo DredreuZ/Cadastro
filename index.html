@@ -79,8 +79,14 @@ button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:
       <label for="regName">Nome do produto</label>
       <input id="regName" placeholder="Nome do produto">
 
-      <label for="regImage">Imagem do produto</label>
-      <input id="regImage" type="file" accept="image/*" class="file">
+      <label>Imagem do produto</label>
+      <div class="row">
+        <button type="button" class="primary" id="takePhoto">📷 Tirar foto</button>
+        <button type="button" class="secondary" id="choosePhoto">🖼️ Escolher da galeria</button>
+      </div>
+      <input id="regCamera" type="file" accept="image/*" capture="environment" class="hidden">
+      <input id="regImage" type="file" accept="image/*" class="hidden">
+      <div class="camera-note">Você pode tirar uma foto nova diretamente pela câmera ou escolher uma foto já salva no celular.</div>
       <img id="regPreview" class="preview" alt="Prévia da imagem">
 
       <div class="row" style="margin-top:12px">
@@ -254,15 +260,25 @@ $("lookupRegister").onclick=async()=>{
   await processCode(code,"register");
 };
 
-$("regImage").addEventListener("change", async e=>{
-  const file=e.target.files?.[0];
+async function handleImageFile(file){
   if(!file)return;
   try{
     pendingImageData=await compressImage(file);
     $("regPreview").src=pendingImageData;
     $("regPreview").style.display="block";
     delete $("regPreview").dataset.remote;
+    showStatus($("regStatus"),"Foto adicionada ao cadastro.","ok");
   }catch(err){showStatus($("regStatus"),"Não foi possível carregar a imagem.","err")}
+}
+
+$("takePhoto").onclick=()=>$("regCamera").click();
+$("choosePhoto").onclick=()=>$("regImage").click();
+$("regCamera").addEventListener("change", async e=>{
+  await handleImageFile(e.target.files?.[0]);
+  e.target.value="";
+});
+$("regImage").addEventListener("change", async e=>{
+  await handleImageFile(e.target.files?.[0]);
 });
 
 function compressImage(file){
