@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -44,9 +44,11 @@ button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:
 .small{font-size:12px;color:var(--muted)}
 .file{padding:10px 0}
 .list-item{display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border); border-radius:12px; padding:12px; margin-top:9px; cursor:pointer;}
+.search-suggestion-item{padding:10px 12px; border-bottom:1px solid var(--border); cursor:pointer; display:flex; justify-content:space-between; align-items:center;}
+.search-suggestion-item:last-child{border-bottom:none;}
+.search-suggestion-item:hover{background:#f3f4f6;}
+.search-suggestion-item .match-score{font-size:11px; color:var(--muted); background:#e5e7eb; padding:2px 6px; border-radius:4px;}
 </style>
-
-
 
 
 <style>
@@ -71,6 +73,7 @@ button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:
 </head>
 <body>
 
+
 <div id="v7App" style="display:block"><header>
   <h1>📦 Catálogo de Produtos</h1>
   <p>Escaneie, consulte e cadastre produtos pelo código de barras.</p>
@@ -93,7 +96,6 @@ button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:
     <div id="mainResult" class="card hidden"></div>
 
 
-    <!-- Novo painel de Vencimentos Próximos na Home -->
     <div class="card" id="homeExpirationsCard">
       <h2>⏳ Produtos Perto de Vencer</h2>
       <div id="homeExpirationsList"></div>
@@ -146,9 +148,7 @@ button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:
   </section>
 
 
-  <!-- Nova Aba de Validades -->
   <section id="page-validities" class="page">
-    <!-- View 1: Lista de Clientes -->
     <div class="card" id="view-clients">
       <h2>👥 Clientes</h2>
       <label>Adicionar Novo Cliente</label>
@@ -161,7 +161,6 @@ button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:
     </div>
 
 
-    <!-- View 2: Detalhes do Cliente (Validades) -->
     <div class="card hidden" id="view-client-details">
       <button class="secondary" id="backToClients" style="margin-bottom:12px; padding: 8px 12px; font-size:13px;">⬅ Voltar aos Clientes</button>
       <h2 id="currentClientTitle">Cliente</h2>
@@ -185,17 +184,21 @@ button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:
   </section>
 
 
-
-
-
-
 <section id="page-labels" class="page">
   <div class="card">
     <h2>🏷️ Gerador de etiquetas EAN-13</h2>
-    <p class="small">Selecione um produto do estoque. O nome, o código e o código de barras serão preenchidos automaticamente.</p>
-    <label for="labelProduct">Produto do estoque</label>
+    <p class="small">Pesquise o produto pelo nome (com busca tolerante a erros de digitação) ou selecione da lista.</p>
+    
+    <label for="labelSearchInput">🔍 Pesquisar produto por nome</label>
+    <input id="labelSearchInput" type="text" placeholder="Digite para pesquisar (ex: ipanema, ipsnema...)" autocomplete="off">
+    <div id="labelSearchResultsList" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; margin-top: 6px; display: none; background: #fff; box-shadow: 0 4px 12px #00000015; z-index: 10; position: relative;"></div>
+
+
+    <label for="labelProduct" style="margin-top:12px;">Produto selecionado</label>
     <select id="labelProduct"></select>
     <div id="labelProductInfo" class="status show warn" style="margin-top:10px">Selecione um produto.</div>
+
+
     <label for="labelQty">Quantidade de etiquetas</label>
     <input id="labelQty" type="number" min="1" max="200" value="1" inputmode="numeric">
     <div class="row" style="margin-top:12px">
@@ -240,7 +243,6 @@ const STORAGE_KEY = "catalogo_produtos_v1";
 let products = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
 
 
-// Novas estruturas para Clientes e Validades
 let clients = JSON.parse(localStorage.getItem(STORAGE_KEY + "_clients") || "[]");
 let expirations = JSON.parse(localStorage.getItem(STORAGE_KEY + "_expirations") || "[]");
 
@@ -249,7 +251,7 @@ let scanner = null;
 let scannerTarget = "main";
 let scannerRunning = false;
 let pendingImageData = "";
-let currentClientId = null; // Controle da aba de validades
+let currentClientId = null;
 
 
 const $ = id => document.getElementById(id);
@@ -474,10 +476,6 @@ function renderList(){
 $("listSearch").addEventListener("input",renderList);
 
 
-// ---- LÓGICA DA ABA VALIDADES ----
-
-
-// Renderiza a lista de clientes
 function renderClients(){
   const list = $("clientList");
   if(!clients.length){ list.innerHTML='<div class="empty">Nenhum cliente cadastrado.</div>'; return; }
@@ -490,7 +488,6 @@ function renderClients(){
 }
 
 
-// Cadastrar novo cliente
 $("addClientBtn").onclick = () => {
   const name = $("newClientName").value.trim();
   if(!name) return;
@@ -500,7 +497,6 @@ $("addClientBtn").onclick = () => {
 };
 
 
-// Apagar cliente e suas validades em cascata
 function deleteClient(id){
   if(!confirm("Excluir cliente e todas as suas validades vinculadas?")) return;
   clients = clients.filter(c => c.id !== id);
@@ -510,7 +506,6 @@ function deleteClient(id){
 }
 
 
-// Abre a visualização detalhada do cliente selecionado
 function openClient(id){
   currentClientId = id;
   const c = clients.find(x => x.id === id);
@@ -523,7 +518,6 @@ function openClient(id){
 }
 
 
-// Voltar para a tela de clientes
 $("backToClients").onclick = () => {
   $("view-client-details").classList.add("hidden");
   $("view-clients").classList.remove("hidden");
@@ -531,7 +525,6 @@ $("backToClients").onclick = () => {
 };
 
 
-// Preenche o Select com os produtos registrados no catálogo
 function updateProductSelect(){
   const sel = $("expProduct");
   if(!products.length){
@@ -543,7 +536,6 @@ function updateProductSelect(){
 }
 
 
-// Renderiza os vencimentos do cliente atual (mais próximos primeiro)
 function renderClientExpirations(){
   const list = $("clientExpList");
   const exps = expirations.filter(e => e.clientId === currentClientId)
@@ -570,7 +562,6 @@ function renderClientExpirations(){
 }
 
 
-// Adiciona uma nova validade
 $("addExpBtn").onclick = () => {
   const code = $("expProduct").value;
   const date = $("expDate").value;
@@ -596,7 +587,6 @@ function deleteExp(id){
 }
 
 
-// Renderiza na HOME todas as validades ordenadas, globalmente
 function renderHomeExpirations(){
   const list = $("homeExpirationsList");
   const sorted = [...expirations].sort((a,b) => new Date(a.date+"T00:00:00") - new Date(b.date+"T00:00:00"));
@@ -608,7 +598,6 @@ function renderHomeExpirations(){
   }
 
 
-  // Pega só os 10 primeiros mais próximos para a Home
   list.innerHTML = sorted.slice(0, 10).map(e => {
     const p = findProduct(e.productCode) || {name: "Produto Excluído"};
     const c = clients.find(x => x.id === e.clientId) || {name: "Cliente Excluído"};
@@ -616,7 +605,6 @@ function renderHomeExpirations(){
     const expDateObj = new Date(e.date + "T00:00:00");
     const dStr = expDateObj.toLocaleDateString('pt-BR');
     
-    // Cálculo simples de dias para colorir o alerta
     const today = new Date();
     today.setHours(0,0,0,0);
     const diffTime = expDateObj - today;
@@ -638,9 +626,6 @@ function renderHomeExpirations(){
     `;
   }).join("");
 }
-
-
-// ---- FIM DA LÓGICA DA ABA VALIDADES ----
 
 
 function escapeHtml(s){
@@ -722,10 +707,78 @@ $("retryScanner").onclick=async()=>{await stopScanner();await startScanner(scann
 window.addEventListener("beforeunload",()=>{if(scanner)try{scanner.stop()}catch(_){}});
 
 
-// Inicialização de telas na primeira vez
 renderList();
 renderClients();
 renderHomeExpirations();
+
+
+// =========================
+// ALGORITMO DE BUSCA APROXIMADA (FUZZY SEARCH / LEVENSHTEIN)
+// =========================
+function levenshteinDistance(a, b) {
+  a = a.toLowerCase();
+  b = b.toLowerCase();
+  const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
+  for (let i = 0; i <= a.length; i += 1) matrix[0][i] = i;
+  for (let j = 0; j <= b.length; j += 1) matrix[j][0] = j;
+  for (let j = 1; j <= b.length; j += 1) {
+    for (let i = 1; i <= a.length; i += 1) {
+      const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[j][i] = Math.min(
+        matrix[j][i - 1] + 1,
+        matrix[j - 1][i] + 1,
+        matrix[j - 1][i - 1] + indicator
+      );
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
+
+function calculateFuzzyScore(text, query) {
+  if (!query) return { isMatch: true, score: 0 };
+  text = text.toLowerCase().trim();
+  query = query.toLowerCase().trim();
+
+
+  // 1. Match exato ou substring exata (prioridade máxima)
+  if (text === query) return { isMatch: true, score: 1000 };
+  if (text.startsWith(query)) return { isMatch: true, score: 800 - (text.length - query.length) };
+  if (text.includes(query)) return { isMatch: true, score: 600 - text.indexOf(query) };
+
+
+  // 2. Busca por palavras individuais ou tolerância Levenshtein
+  const textWords = text.split(/\s+/);
+  const queryWords = query.split(/\s+/);
+
+
+  let bestWordScore = 0;
+  for (const qWord of queryWords) {
+    if (!qWord) continue;
+    let minDistance = 999;
+    for (const tWord of textWords) {
+      const dist = levenshteinDistance(tWord, qWord);
+      if (dist < minDistance) minDistance = dist;
+    }
+    // Permite erros com base no tamanho da palavra buscada
+    const maxAllowedDist = qWord.length <= 3 ? 1 : (qWord.length <= 6 ? 2 : 3);
+    if (minDistance <= maxAllowedDist) {
+      bestWordScore += (100 - minDistance * 25);
+    }
+  }
+
+
+  // 3. Tolerância de erro na palavra inteira
+  const fullDist = levenshteinDistance(text, query);
+  const maxAllowedFullDist = query.length <= 4 ? 1 : (query.length <= 8 ? 2 : 3);
+  if (fullDist <= maxAllowedFullDist) {
+    const fullScore = 150 - fullDist * 30;
+    if (fullScore > bestWordScore) bestWordScore = fullScore;
+  }
+
+
+  return { isMatch: bestWordScore > 0, score: bestWordScore };
+}
 
 
 // =========================
@@ -739,6 +792,7 @@ function isValidEAN13(code){
   const check=(10-(sum%10))%10;
   return check===Number(code[12]);
 }
+
 
 function ean13Svg(code){
   code=normalizeCode(code);
@@ -766,6 +820,7 @@ function ean13Svg(code){
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width.toFixed(2)} ${height}" role="img" aria-label="Código de barras EAN-13 ${code}"><rect width="100%" height="100%" fill="white"/>${rects}</svg>`;
 }
 
+
 function updateLabelProductInfo(){
   const code=$("labelProduct").value;
   const p=findProduct(code);
@@ -784,20 +839,108 @@ function updateLabelProductInfo(){
   info.className="status show ok";
 }
 
-function populateLabelProducts(){
+
+function populateLabelProducts(filteredProducts = null){
   const sel=$("labelProduct");
-  const valid=products.filter(p=>isValidEAN13(p.code));
+  const valid = (filteredProducts || products).filter(p=>isValidEAN13(p.code));
   if(!valid.length){
-    sel.innerHTML='<option value="">Nenhum EAN-13 válido no estoque</option>';
-    $("labelsPreview").innerHTML='<div class="empty">Cadastre produtos com EAN-13 válido para gerar etiquetas.</div>';
+    sel.innerHTML='<option value="">Nenhum EAN-13 válido encontrado</option>';
+    if(!filteredProducts) $("labelsPreview").innerHTML='<div class="empty">Cadastre produtos com EAN-13 válido para gerar etiquetas.</div>';
     updateLabelProductInfo();
     return;
   }
   const current=sel.value;
   sel.innerHTML='<option value="">Selecione um produto...</option>'+valid.map(p=>`<option value="${escapeHtml(p.code)}">${escapeHtml(p.name)} — ${escapeHtml(p.code)}</option>`).join('');
   if(valid.some(p=>p.code===current)) sel.value=current;
+  else if(valid.length === 1) sel.value = valid[0].code; // Seleciona automaticamente se só houver 1 resultado
   updateLabelProductInfo();
 }
+
+
+function handleLabelSearch(){
+  const query = $("labelSearchInput").value.trim();
+  const resultsContainer = $("labelSearchResultsList");
+
+
+  if (!query) {
+    resultsContainer.style.display = "none";
+    resultsContainer.innerHTML = "";
+    populateLabelProducts();
+    return;
+  }
+
+
+  const validProducts = products.filter(p => isValidEAN13(p.code));
+  const matches = [];
+
+
+  for (const p of validProducts) {
+    const res = calculateFuzzyScore(p.name + " " + p.code, query);
+    if (res.isMatch) {
+      matches.push({ product: p, score: res.score });
+    }
+  }
+
+
+  matches.sort((a, b) => b.score - a.score);
+
+
+  if (!matches.length) {
+    resultsContainer.innerHTML = '<div style="padding:12px; color:var(--muted); text-align:center; font-size:13px;">Nenhum produto encontrado para "' + escapeHtml(query) + '"</div>';
+    resultsContainer.style.display = "block";
+    populateLabelProducts([]);
+    return;
+  }
+
+
+  // Preenche o Select ordenado por relevância
+  const sortedProducts = matches.map(m => m.product);
+  populateLabelProducts(sortedProducts);
+  if (sortedProducts.length > 0) {
+    $("labelProduct").value = sortedProducts[0].code;
+    updateLabelProductInfo();
+    generateLabels();
+  }
+
+
+  // Renderiza a lista de sugestões suspensa
+  resultsContainer.innerHTML = matches.map(m => `
+    <div class="search-suggestion-item" data-code="${escapeHtml(m.product.code)}" data-name="${escapeHtml(m.product.name)}">
+      <div>
+        <strong>${escapeHtml(m.product.name)}</strong>
+        <div style="font-size:11px; color:var(--muted);">${escapeHtml(m.product.code)}</div>
+      </div>
+      <span class="match-score">Relevância: ${Math.round(m.score)}</span>
+    </div>
+  `).join("");
+  resultsContainer.style.display = "block";
+
+
+  // Evento ao clicar em uma sugestão
+  resultsContainer.querySelectorAll(".search-suggestion-item").forEach(item => {
+    item.addEventListener("click", () => {
+      const code = item.dataset.code;
+      const name = item.dataset.name;
+      $("labelProduct").value = code;
+      $("labelSearchInput").value = name;
+      resultsContainer.style.display = "none";
+      updateLabelProductInfo();
+      generateLabels();
+    });
+  });
+}
+
+
+$("labelSearchInput").addEventListener("input", handleLabelSearch);
+
+
+// Fecha a lista suspensa ao clicar fora
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#labelSearchInput") && !e.target.closest("#labelSearchResultsList")) {
+    $("labelSearchResultsList").style.display = "none";
+  }
+});
+
 
 function generateLabels(){
   const p=findProduct($("labelProduct").value);
@@ -809,6 +952,7 @@ function generateLabels(){
   showStatus($("labelStatus"),`${qty} etiqueta(s) gerada(s) para "${p.name}".`,"ok");
 }
 
+
 $("labelProduct").addEventListener("change",()=>{updateLabelProductInfo();generateLabels();});
 $("generateLabelsBtn").onclick=generateLabels;
 $("printLabelsBtn").onclick=()=>{
@@ -816,7 +960,7 @@ $("printLabelsBtn").onclick=()=>{
   setTimeout(()=>window.print(),100);
 };
 
-// Atualiza a lista de etiquetas sempre que o estoque muda
+
 const _saveAll=saveAll;
 saveAll=function(){_saveAll();populateLabelProducts();};
 populateLabelProducts();
