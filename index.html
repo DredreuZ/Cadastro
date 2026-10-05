@@ -1,8 +1,6 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111827">
@@ -48,55 +46,32 @@ button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:
 .list-item{display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border); border-radius:12px; padding:12px; margin-top:9px; cursor:pointer;}
 </style>
 
-<style>
-.v7-auth{position:fixed;inset:0;z-index:100;background:#f3f4f6;display:flex;align-items:center;justify-content:center;padding:18px}
-.v7-auth-card{width:100%;max-width:440px;background:#fff;border:1px solid #d1d5db;border-radius:18px;padding:18px;box-shadow:0 10px 30px #0002}
-.v7-auth-card h2{margin-bottom:6px}.v7-auth-card p{color:#6b7280;font-size:13px}
-.v7-auth-card button{margin-top:10px}
-#v7App{display:none}.v7-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.v7-stat{border:1px solid #d1d5db;border-radius:12px;padding:13px}.v7-stat span{display:block;font-size:12px;color:#6b7280}.v7-stat strong{font-size:25px}
-.v7-count{font-size:13px;color:#6b7280;margin-bottom:8px}.v7-admin-row{border:1px solid #d1d5db;border-radius:12px;padding:12px;margin-top:9px}
-.v7-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#e5e7eb;font-size:11px}
-.v7-exp{border:1px solid #d1d5db;border-radius:12px;padding:12px;margin-top:8px}
-.v7-exp strong{display:block}.v7-exp .meta{margin-top:3px}
-</style>
 
+
+
+<style>
+.labels-preview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.barcode-label{background:#fff;border:1px dashed #9ca3af;border-radius:8px;padding:8px;text-align:center;break-inside:avoid;min-height:145px;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.barcode-label .label-name{font-size:12px;font-weight:700;line-height:1.15;margin-bottom:5px;max-width:100%;word-break:break-word}
+.barcode-label svg{width:100%;max-width:240px;height:72px}
+.barcode-label .label-code{font-family:monospace;font-size:13px;letter-spacing:1px;margin-top:2px}
+@media(max-width:420px){.labels-preview{grid-template-columns:1fr}}
+@media print{
+  @page{size:auto;margin:8mm}
+  body{background:#fff}
+  body>*:not(#v7App){display:none!important}
+  #v7App{display:block!important}
+  header,nav,main>section:not(#page-labels),#page-labels>.card:first-child{display:none!important}
+  #page-labels{display:block!important;padding:0!important}
+  #page-labels>.card:last-child{border:0;box-shadow:none;margin:0;padding:0}
+  #labelsPreview{display:grid!important;grid-template-columns:repeat(2,1fr);gap:6mm}
+  .barcode-label{border:1px solid #ddd;min-height:35mm;border-radius:0}
+}
+</style>
 </head>
 <body>
 
-<div id="v7Auth" class="v7-auth">
-  <div class="v7-auth-card">
-    <h2>📦 Catálogo v7</h2>
-    <p>Entre com usuário e senha ou crie sua conta.</p>
-
-    <div id="v7Login">
-      <label>Usuário</label><input id="v7LoginUser" autocomplete="username">
-      <label>Senha</label><input id="v7LoginPass" type="password" autocomplete="current-password">
-      <button class="primary big" id="v7LoginBtn">Entrar</button>
-      <button class="secondary big" id="v7ShowSignup">Criar conta</button>
-    </div>
-
-    <div id="v7Signup" class="hidden">
-      <label>Usuário</label><input id="v7SignupUser" autocomplete="username">
-      <label>E-mail</label><input id="v7SignupEmail" type="email" autocomplete="email">
-      <label>Senha</label><input id="v7SignupPass" type="password" autocomplete="new-password">
-      <label>Confirmar senha</label><input id="v7SignupPass2" type="password" autocomplete="new-password">
-      <button class="primary big" id="v7SignupBtn">Criar conta</button>
-      <button class="secondary big" id="v7ShowLogin">Voltar</button>
-    </div>
-
-    <div id="v7Verify" class="hidden">
-      <h3>✉️ Verificar e-mail</h3>
-      <p class="small">Digite o código de 6 caracteres enviado para seu e-mail.</p>
-      <input id="v7Code" maxlength="6" autocapitalize="characters">
-      <button class="primary big" id="v7VerifyBtn">Verificar</button>
-      <button class="secondary big" id="v7CancelVerify">Cancelar</button>
-    </div>
-    <div id="v7AuthStatus" class="status"></div>
-  </div>
-</div>
-
-<div id="v7App"><header>
+<div id="v7App" style="display:block"><header>
   <h1>📦 Catálogo de Produtos</h1>
   <p>Escaneie, consulte e cadastre produtos pelo código de barras.</p>
 </header>
@@ -209,26 +184,31 @@ button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:
     </div>
   </section>
 
-<section id="page-v7home" class="page">
+
+
+
+
+
+<section id="page-labels" class="page">
   <div class="card">
-    <h2>🏠 Painel inicial</h2>
-    <div class="v7-grid">
-      <div class="v7-stat"><span>Produtos</span><strong id="v7ProductCount">0</strong></div>
-      <div class="v7-stat"><span>Usuário</span><strong id="v7CurrentUser">-</strong></div>
+    <h2>🏷️ Gerador de etiquetas EAN-13</h2>
+    <p class="small">Selecione um produto do estoque. O nome, o código e o código de barras serão preenchidos automaticamente.</p>
+    <label for="labelProduct">Produto do estoque</label>
+    <select id="labelProduct"></select>
+    <div id="labelProductInfo" class="status show warn" style="margin-top:10px">Selecione um produto.</div>
+    <label for="labelQty">Quantidade de etiquetas</label>
+    <input id="labelQty" type="number" min="1" max="200" value="1" inputmode="numeric">
+    <div class="row" style="margin-top:12px">
+      <button class="primary" id="generateLabelsBtn">🏷️ Gerar etiquetas</button>
+      <button class="secondary" id="printLabelsBtn">🖨️ Imprimir</button>
     </div>
+    <div id="labelStatus" class="status"></div>
   </div>
-  <div class="card"><h2>🆕 3 últimos produtos</h2><div id="v7Latest"></div></div>
-  <div class="card"><h2>⏳ Próximos do vencimento</h2><div id="v7NearExpiry"></div></div>
-</section>
-
-<section id="page-v7admin" class="page">
   <div class="card">
-    <h2>🛡️ Administração</h2>
-    <p class="small">Somente o superusuário pode administrar contas.</p>
-    <div id="v7AdminList"></div>
+    <h3>Pré-visualização</h3>
+    <div id="labelsPreview" class="labels-preview"></div>
   </div>
 </section>
-
 </main>
 
 
@@ -237,8 +217,7 @@ button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:
   <button data-page="register"><span>➕</span><br>Produto</button>
   <button data-page="validities"><span>⏳</span><br>Validades</button>
   <button data-page="list"><span>📋</span><br>Catálogo</button>
-<button data-page="v7home"><span>🏠</span><br>Painel</button>
-<button data-page="v7admin" id="v7AdminNav" class="hidden"><span>🛡️</span><br>Admin</button>
+  <button data-page="labels"><span>🏷️</span><br>Etiquetas</button>
 </nav>
 
 
@@ -747,191 +726,103 @@ window.addEventListener("beforeunload",()=>{if(scanner)try{scanner.stop()}catch(
 renderList();
 renderClients();
 renderHomeExpirations();
+
+
+// =========================
+// GERADOR DE ETIQUETAS EAN-13
+// =========================
+function isValidEAN13(code){
+  code=normalizeCode(code);
+  if(!/^\d{13}$/.test(code)) return false;
+  let sum=0;
+  for(let i=0;i<12;i++) sum += Number(code[i]) * (i%2===0 ? 1 : 3);
+  const check=(10-(sum%10))%10;
+  return check===Number(code[12]);
+}
+
+function ean13Svg(code){
+  code=normalizeCode(code);
+  if(!isValidEAN13(code)) return '';
+  const L=[
+    '0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'
+  ];
+  const G=[
+    '0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'
+  ];
+  const R=[
+    '1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'
+  ];
+  const parity=[
+    'LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'
+  ][Number(code[0])];
+  let bits='101';
+  for(let i=1;i<=6;i++) bits += parity[i-1]==='L'?L[Number(code[i])]:G[Number(code[i])];
+  bits+='01010';
+  for(let i=7;i<=12;i++) bits+=R[Number(code[i])];
+  bits+='101';
+  const module=2.2, quiet=11, width=(bits.length+quiet*2)*module, height=70;
+  let rects='';
+  for(let i=0;i<bits.length;i++) if(bits[i]==='1') rects+=`<rect x="${((i+quiet)*module).toFixed(2)}" y="0" width="${module.toFixed(2)}" height="${height}"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width.toFixed(2)} ${height}" role="img" aria-label="Código de barras EAN-13 ${code}"><rect width="100%" height="100%" fill="white"/>${rects}</svg>`;
+}
+
+function updateLabelProductInfo(){
+  const code=$("labelProduct").value;
+  const p=findProduct(code);
+  const info=$("labelProductInfo");
+  if(!p){
+    info.textContent=products.length?"Selecione um produto.":"Nenhum produto cadastrado no estoque.";
+    info.className="status show warn";
+    return;
+  }
+  if(!isValidEAN13(p.code)){
+    info.textContent=`${p.name}: o código ${p.code} não é um EAN-13 válido. Cadastre um código de 13 dígitos com dígito verificador correto.`;
+    info.className="status show err";
+    return;
+  }
+  info.textContent=`${p.name} — EAN-13: ${p.code}`;
+  info.className="status show ok";
+}
+
+function populateLabelProducts(){
+  const sel=$("labelProduct");
+  const valid=products.filter(p=>isValidEAN13(p.code));
+  if(!valid.length){
+    sel.innerHTML='<option value="">Nenhum EAN-13 válido no estoque</option>';
+    $("labelsPreview").innerHTML='<div class="empty">Cadastre produtos com EAN-13 válido para gerar etiquetas.</div>';
+    updateLabelProductInfo();
+    return;
+  }
+  const current=sel.value;
+  sel.innerHTML='<option value="">Selecione um produto...</option>'+valid.map(p=>`<option value="${escapeHtml(p.code)}">${escapeHtml(p.name)} — ${escapeHtml(p.code)}</option>`).join('');
+  if(valid.some(p=>p.code===current)) sel.value=current;
+  updateLabelProductInfo();
+}
+
+function generateLabels(){
+  const p=findProduct($("labelProduct").value);
+  const qty=Math.max(1,Math.min(200,parseInt($("labelQty").value,10)||1));
+  if(!p){showStatus($("labelStatus"),"Selecione um produto do estoque.","warn");return;}
+  if(!isValidEAN13(p.code)){showStatus($("labelStatus"),"Este produto não possui um EAN-13 válido.","err");return;}
+  $("labelQty").value=qty;
+  $("labelsPreview").innerHTML=Array.from({length:qty},()=>`<div class="barcode-label"><div class="label-name">${escapeHtml(p.name)}</div>${ean13Svg(p.code)}<div class="label-code">${escapeHtml(p.code)}</div></div>`).join('');
+  showStatus($("labelStatus"),`${qty} etiqueta(s) gerada(s) para "${p.name}".`,"ok");
+}
+
+$("labelProduct").addEventListener("change",()=>{updateLabelProductInfo();generateLabels();});
+$("generateLabelsBtn").onclick=generateLabels;
+$("printLabelsBtn").onclick=()=>{
+  if(!$("labelsPreview").children.length || $("labelsPreview").querySelector('.empty')) generateLabels();
+  setTimeout(()=>window.print(),100);
+};
+
+// Atualiza a lista de etiquetas sempre que o estoque muda
+const _saveAll=saveAll;
+saveAll=function(){_saveAll();populateLabelProducts();};
+populateLabelProducts();
 </script>
 </div>
-<script>
-/* =========================
-   CATÁLOGO v7 — CONTROLE
-   ========================= */
-const V7_URL = "COLOQUE_SUA_SUPABASE_URL_AQUI";
-const V7_ANON = "COLOQUE_SUA_SUPABASE_ANON_KEY_AQUI";
-const V7_ENABLED = V7_URL.startsWith("https://") && !V7_URL.includes("COLOQUE_") && !V7_ANON.includes("COLOQUE_");
-const V7_SB = V7_ENABLED ? supabase.createClient(V7_URL,V7_ANON) : null;
-let v7Profile=null, v7Pending=null;
 
-function v7Status(msg,type="ok"){
-  const e=document.getElementById("v7AuthStatus");
-  e.textContent=msg;e.className="status show "+type;
-}
-function v7Mode(mode){
-  document.getElementById("v7Login").classList.toggle("hidden",mode!=="login");
-  document.getElementById("v7Signup").classList.toggle("hidden",mode!=="signup");
-  document.getElementById("v7Verify").classList.toggle("hidden",mode!=="verify");
-  if(mode==="login") v7Status("");
-}
-function v7Enter(profile){
-  v7Profile=profile||{id:"local",username:document.getElementById("v7LoginUser").value,role:"user",status:"active"};
-  document.getElementById("v7Auth").style.display="none";
-  document.getElementById("v7App").style.display="block";
-  document.getElementById("v7AdminNav").classList.toggle("hidden",v7Profile.role!=="superuser");
-  v7Refresh();
-}
-function v7Logout(){
-  if(V7_SB) V7_SB.auth.signOut();
-  v7Profile=null;
-  document.getElementById("v7App").style.display="none";
-  document.getElementById("v7Auth").style.display="flex";
-  v7Mode("login");
-}
-function v7SortProducts(){
-  const s=document.getElementById("v7Sort")?.value||"recent";
-  const a=[...products];
-  if(s==="recent")a.sort((x,y)=>new Date(y.createdAt||0)-new Date(x.createdAt||0));
-  if(s==="oldest")a.sort((x,y)=>new Date(x.createdAt||0)-new Date(y.createdAt||0));
-  if(s==="az")a.sort((x,y)=>x.name.localeCompare(y.name));
-  if(s==="za")a.sort((x,y)=>y.name.localeCompare(x.name));
-  if(s==="code")a.sort((x,y)=>x.code.localeCompare(y.code));
-  return a;
-}
-function v7Countdown(date){
-  const end=new Date(date+"T23:59:59"),ms=end-new Date();
-  if(ms<0)return "Vencido";
-  const h=Math.floor(ms/3600000),d=Math.floor(h/24),hh=h%24;
-  return d?`${d} dias e ${hh} horas`:`${hh} horas`;
-}
-function v7Refresh(){
-  document.getElementById("v7ProductCount").textContent=products.length;
-  document.getElementById("v7RegisterCount").textContent=products.length;
-  document.getElementById("v7CurrentUser").textContent=v7Profile?.username||"-";
-  const latest=v7SortProducts().slice(0,3);
-  document.getElementById("v7Latest").innerHTML=latest.length?latest.map(p=>`
-    <div class="product">${p.image?`<img src="${escapeHtml(p.image)}">`:"<div></div>"}
-      <div><strong>${escapeHtml(p.name)}</strong><div class="meta">${escapeHtml(p.code)}</div></div>
-    </div>`).join(""):'<div class="empty">Nenhum produto cadastrado.</div>';
-
-  const near=[...expirations].sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,10);
-  document.getElementById("v7NearExpiry").innerHTML=near.length?near.map(e=>{
-    const p=findProduct(e.productCode)||{name:"Produto excluído"};
-    const c=clients.find(x=>x.id===e.clientId)||{name:"Cliente excluído"};
-    return `<div class="v7-exp"><strong>${escapeHtml(p.name)}</strong>
-      <div class="meta">👤 ${escapeHtml(c.name)}</div>
-      <div style="font-weight:700;margin-top:5px">⏳ ${v7Countdown(e.date)} — ${new Date(e.date+"T00:00:00").toLocaleDateString("pt-BR")}</div>
-    </div>`;
-  }).join(""):'<div class="empty">Nenhuma validade cadastrada.</div>';
-
-  if(typeof renderList==="function")renderList();
-  if(typeof renderHomeExpirations==="function")renderHomeExpirations();
-}
-function v7Go(name){
-  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
-  const e=document.getElementById("page-"+name);
-  if(e)e.classList.add("active");
-  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.page===name));
-  if(name==="v7home")v7Refresh();
-  if(name==="v7admin")v7AdminLoad();
-}
-document.querySelectorAll("nav button[data-page]").forEach(b=>{
-  b.addEventListener("click",()=>{if(b.dataset.page==="v7home"||b.dataset.page==="v7admin")v7Go(b.dataset.page)});
-});
-document.getElementById("v7Sort").addEventListener("change",v7Refresh);
-
-document.getElementById("v7ShowSignup").onclick=()=>v7Mode("signup");
-document.getElementById("v7ShowLogin").onclick=()=>v7Mode("login");
-document.getElementById("v7CancelVerify").onclick=()=>v7Mode("signup");
-
-document.getElementById("v7LoginBtn").onclick=async()=>{
-  const username=document.getElementById("v7LoginUser").value.trim(),password=document.getElementById("v7LoginPass").value;
-  if(!username||!password)return v7Status("Informe usuário e senha.","warn");
-
-  if(!V7_ENABLED){
-    if(username==="Seudd"&&password==="senha1232")return v7Enter({id:"local-admin",username:"Seudd",role:"superuser",status:"active"});
-    return v7Enter({id:"local-"+username,username,role:"user",status:"active"});
-  }
-  try{
-    const r=await V7_SB.rpc("get_email_for_username",{p_username:username});
-    if(r.error||!r.data)throw new Error("Usuário ou senha inválidos.");
-    const s=await V7_SB.auth.signInWithPassword({email:r.data,password});
-    if(s.error)throw s.error;
-    const p=await V7_SB.from("profiles").select("*").eq("id",s.data.user.id).single();
-    if(p.error)throw p.error;
-    if(p.data.status==="blocked" || (p.data.access_expires_at&&new Date(p.data.access_expires_at)<=new Date()))throw new Error("Acesso bloqueado ou expirado.");
-    v7Enter(p.data);
-  }catch(e){v7Status(e.message||"Não foi possível entrar.","err")}
-};
-
-document.getElementById("v7SignupBtn").onclick=async()=>{
-  const username=document.getElementById("v7SignupUser").value.trim(),email=document.getElementById("v7SignupEmail").value.trim().toLowerCase();
-  const password=document.getElementById("v7SignupPass").value,password2=document.getElementById("v7SignupPass2").value;
-  if(!username||!email||!password)return v7Status("Preencha todos os campos.","warn");
-  if(password!==password2)return v7Status("As senhas não conferem.","warn");
-  if(password.length<8)return v7Status("A senha precisa ter pelo menos 8 caracteres.","warn");
-  if(!V7_ENABLED)return v7Status("Configure o Supabase para ativar cadastro e verificação por e-mail.","err");
-  try{
-    const r=await fetch(V7_URL+"/functions/v1/send-verification",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({action:"signup",username,email,password})});
-    const d=await r.json();if(!r.ok)throw new Error(d.error||"Não foi possível enviar o código.");
-    v7Pending={username,email};v7Mode("verify");v7Status("Código enviado para seu e-mail.","ok");
-  }catch(e){v7Status(e.message,"err")}
-};
-
-document.getElementById("v7VerifyBtn").onclick=async()=>{
-  const code=document.getElementById("v7Code").value.trim().toUpperCase();
-  if(code.length!==6)return v7Status("O código precisa ter 6 caracteres.","warn");
-  try{
-    const r=await fetch(V7_URL+"/functions/v1/send-verification",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({action:"verify",username:v7Pending.username,email:v7Pending.email,code})});
-    const d=await r.json();if(!r.ok)throw new Error(d.error||"Código inválido.");
-    document.getElementById("v7LoginUser").value=v7Pending.username;v7Mode("login");v7Status("Conta verificada. Faça login.","ok");
-  }catch(e){v7Status(e.message,"err")}
-};
-
-async function v7AdminLoad(){
-  if(v7Profile?.role!=="superuser")return;
-  const box=document.getElementById("v7AdminList");box.innerHTML="<div class='small'>Carregando...</div>";
-  if(!V7_ENABLED){box.innerHTML="<div class='status show warn'>Configure o Supabase para usar a administração real.</div>";return}
-  const r=await V7_SB.from("profiles").select("id,username,email,role,status,access_expires_at,created_at").order("created_at",{ascending:false});
-  if(r.error){box.innerHTML=`<div class="status show err">${escapeHtml(r.error.message)}</div>`;return}
-  box.innerHTML=r.data.map(u=>`
-    <div class="v7-admin-row">
-      <strong>${escapeHtml(u.username)}</strong> ${u.role==="superuser"?'<span class="v7-badge">SUPERUSUÁRIO</span>':''}
-      <div class="meta">${escapeHtml(u.email)} · ${escapeHtml(u.status)}</div>
-      <div class="row" style="margin-top:8px">
-        <select data-v7-access="${u.id}">
-          <option value="">Alterar acesso...</option><option value="hour">1 hora</option>
-          <option value="day">1 dia</option><option value="month">1 mês</option>
-          <option value="life">Vitalício</option><option value="block">Bloquear</option>
-        </select>
-        <button class="danger" data-v7-delete="${u.id}">Excluir</button>
-      </div>
-    </div>`).join("");
-  document.querySelectorAll("[data-v7-access]").forEach(s=>s.onchange=async()=>{
-    if(!s.value)return;
-    const x=await V7_SB.rpc("admin_set_access",{p_user_id:s.dataset.v7Access,p_access:s.value});
-    if(x.error)alert(x.error.message);else v7AdminLoad();
-  });
-  document.querySelectorAll("[data-v7-delete]").forEach(b=>b.onclick=async()=>{
-    if(!confirm("Excluir esta conta?"))return;
-    const session=(await V7_SB.auth.getSession()).data.session;
-    const x=await fetch(V7_URL+"/functions/v1/admin-user",{method:"POST",headers:{
-      "Content-Type":"application/json","Authorization":"Bearer "+session.access_token
-    },body:JSON.stringify({action:"delete",user_id:b.dataset.v7Delete})});
-    const d=await x.json();if(!x.ok)alert(d.error||"Erro");else v7AdminLoad();
-  });
-}
-
-document.getElementById("logoutBtn")?.addEventListener("click",v7Logout);
-setInterval(()=>{if(v7Profile)v7Refresh()},30000);
-
-(async()=>{
-  if(V7_ENABLED){
-    const s=await V7_SB.auth.getSession();
-    if(s.data.session){
-      const p=await V7_SB.from("profiles").select("*").eq("id",s.data.session.user.id).single();
-      if(!p.error && p.data.status==="active" && (!p.data.access_expires_at||new Date(p.data.access_expires_at)>new Date()))v7Enter(p.data);
-    }
-  }
-})();
-</script>
 
 </body>
 </html>
