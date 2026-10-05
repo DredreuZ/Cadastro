@@ -12,7 +12,7 @@
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
 header{position:sticky;top:0;z-index:5;background:#111827;color:#fff;padding:14px 16px}
 header h1{font-size:20px;margin:0 0 4px}header p{margin:0;color:#d1d5db;font-size:13px}
-nav{position:sticky;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:1px solid var(--border)}
+nav{position:sticky;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(5,1fr);background:#fff;border-top:1px solid var(--border)}
 nav button{border:0;background:#fff;padding:12px 6px;font-size:12px;color:#374151; display:flex; flex-direction:column; align-items:center; gap:4px;}
 nav button.active{color:var(--primary);font-weight:700}
 main{max-width:720px;margin:auto;padding:16px 16px 90px}
@@ -164,6 +164,9 @@ button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:
     <div class="card hidden" id="view-client-details">
       <button class="secondary" id="backToClients" style="margin-bottom:12px; padding: 8px 12px; font-size:13px;">⬅ Voltar aos Clientes</button>
       <h2 id="currentClientTitle">Cliente</h2>
+       <div class="row">
+         <button class="secondary" id="clientPhotoHint">📸 Foto do produto é preservada no catálogo</button>
+       </div>
 
 
       <h3 style="margin-top: 16px; margin-bottom:4px;">➕ Adicionar Validade</h3>
@@ -239,12 +242,35 @@ button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:
 
 
 <script>
-const STORAGE_KEY = "catalogo_produtos_v1";
-let products = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+const STORAGE_KEY = "catalogo_produtos_v2";
+const CLIENTS_KEY = STORAGE_KEY + "_clients";
+const EXPIRATIONS_KEY = STORAGE_KEY + "_expirations";
+const LEGACY_KEY = "catalogo_produtos_v1";
 
+function readStore(key, fallback=[]){
+  try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
+  catch(e){ console.warn("Dados inválidos no armazenamento:", key, e); return fallback; }
+}
+function writeStore(key, value){
+  try{
+    localStorage.setItem(key, JSON.stringify(value));
+  }catch(e){
+    console.error(e);
+    alert("O armazenamento do navegador está cheio. Exporte um backup e remova imagens/produtos antigos antes de continuar.");
+    throw e;
+  }
+}
+let products = readStore(STORAGE_KEY);
+let clients = readStore(CLIENTS_KEY);
+let expirations = readStore(EXPIRATIONS_KEY);
 
-let clients = JSON.parse(localStorage.getItem(STORAGE_KEY + "_clients") || "[]");
-let expirations = JSON.parse(localStorage.getItem(STORAGE_KEY + "_expirations") || "[]");
+// Migração transparente da versão anterior.
+if(!products.length){
+  const legacy = readStore(LEGACY_KEY);
+  if(Array.isArray(legacy) && legacy.length){ products = legacy; writeStore(STORAGE_KEY, products); }
+}
+if(!Array.isArray(clients)) clients=[];
+if(!Array.isArray(expirations)) expirations=[];
 
 
 let scanner = null;
@@ -258,9 +284,47 @@ const $ = id => document.getElementById(id);
 const normalizeCode = v => String(v || "").replace(/\D/g,"").trim();
 
 
-function saveAll(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(products)); renderList(); updateProductSelect(); }
-function saveClients(){ localStorage.setItem(STORAGE_KEY + "_clients", JSON.stringify(clients)); renderClients(); renderHomeExpirations(); }
-function saveExpirations(){ localStorage.setItem(STORAGE_KEY + "_expirations", JSON.stringify(expirations)); renderClientExpirations(); renderHomeExpirations(); }
+function saveAll(){
+  writeStore(STORAGE_KEY, products);
+  
+function exportData(){
+  const payload = {
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    products, clients, expirations
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href=url; a.download="backup-catalogo-produtos.json"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  showStatus($("dataStatus"),"Backup exportado com sucesso.","ok");
+}
+$("exportDataBtn").onclick=exportData;
+$("importDataBtn").onclick=()=>$("importDataFile").click();
+$("importDataFile").addEventListener("change", async e=>{
+  const file=e.target.files?.[0]; if(!file)return;
+  try{
+    const data=JSON.parse(await file.text());
+    if(!Array.isArray(data.products)||!Array.isArray(data.clients)||!Array.isArray(data.expirations)) throw new Error("Formato inválido");
+    if(!confirm("Importar este backup substituirá os dados atuais deste navegador. Continuar?")) return;
+    products=data.products; clients=data.clients; expirations=data.expirations;
+    saveAll(); saveClients(); saveExpirations();
+    showStatus($("dataStatus"),"Backup importado com sucesso.","ok");
+  }catch(err){ showStatus($("dataStatus"),"Não foi possível importar o backup.","err"); }
+  e.target.value="";
+});
+
+renderList(); updateProductSelect(); populateLabelProducts();
+}
+function saveClients(){
+  writeStore(CLIENTS_KEY, clients);
+  renderClients(); renderHomeExpirations();
+}
+function saveExpirations(){
+  writeStore(EXPIRATIONS_KEY, expirations);
+  renderClientExpirations(); renderHomeExpirations();
+}
 
 
 function showStatus(el, msg, type="ok"){
@@ -470,7 +534,11 @@ function renderList(){
     </div>`).join("");
   document.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>{
     const p=products.find(x=>x.id===b.dataset.delete);
-    if(p && confirm('Excluir "'+p.name+'"?')){products=products.filter(x=>x.id!==p.id);saveAll();}
+    if(p && confirm('Excluir "'+p.name+'"?\\nAs validades vinculadas também serão removidas.')){
+      products=products.filter(x=>x.id!==p.id);
+      expirations=expirations.filter(e=>normalizeCode(e.productCode)!==normalizeCode(p.code));
+      saveAll(); saveExpirations();
+    }
   });
 }
 $("listSearch").addEventListener("input",renderList);
@@ -527,58 +595,68 @@ $("backToClients").onclick = () => {
 
 function updateProductSelect(){
   const sel = $("expProduct");
+  const previous = sel.value;
   if(!products.length){
     sel.innerHTML = '<option value="">Cadastre produtos no catálogo primeiro</option>';
+    renderExpProductPreview();
     return;
   }
   sel.innerHTML = '<option value="">Selecione um produto...</option>' +
-    products.map(p => `<option value="${p.code}">${escapeHtml(p.name)}</option>`).join("");
+    products.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'))
+      .map(p => `<option value="${escapeHtml(p.code)}">${escapeHtml(p.name)} — ${escapeHtml(p.code)}</option>`).join("");
+  if(products.some(p=>p.code===previous)) sel.value=previous;
+  renderExpProductPreview();
 }
 
-
-function renderClientExpirations(){
-  const list = $("clientExpList");
-  const exps = expirations.filter(e => e.clientId === currentClientId)
-    .sort((a,b) => new Date(a.date+"T00:00:00") - new Date(b.date+"T00:00:00"));
-
-
-  if(!exps.length){ list.innerHTML = '<div class="empty">Nenhuma validade cadastrada.</div>'; return; }
-
-
-  list.innerHTML = exps.map(e => {
-    const p = findProduct(e.productCode) || {name: "Produto Excluído", image: ""};
-    const dStr = new Date(e.date + "T00:00:00").toLocaleDateString('pt-BR');
-    return `
-      <div class="product">
-        ${p.image?`<img src="${escapeHtml(p.image)}" alt="">`:`<div style="width:76px;height:76px;background:#e5e7eb;border-radius:10px"></div>`}
-        <div>
-          <strong>${escapeHtml(p.name)}</strong>
-          <div class="meta" style="color:var(--text); font-weight:bold; margin-top:4px;">Vence em: ${dStr}</div>
-          <button class="danger" style="margin-top:8px;padding:6px 10px;font-size:12px" onclick="deleteExp('${e.id}')">Excluir Validade</button>
-        </div>
-      </div>
-    `;
-  }).join("");
+function renderExpProductPreview(){
+  const box = $("expProductPreview");
+  if(!box) return;
+  const p = findProduct($("expProduct").value);
+  if(!p){ box.className="product hidden"; box.innerHTML=""; return; }
+  box.className="product";
+  box.innerHTML = `${p.image ? `<img src="${escapeHtml(p.image)}" alt="">` :
+    `<div style="width:76px;height:76px;background:#e5e7eb;border-radius:10px"></div>`}
+    <div><strong>${escapeHtml(p.name)}</strong><div class="meta">Código: ${escapeHtml(p.code)}</div>
+    <div class="small">A foto do catálogo será reutilizada neste vínculo.</div></div>`;
 }
 
+function openQuickProduct(){
+  goPage("register");
+  $("regCode").focus();
+  showStatus($("regStatus"), "Cadastre o produto. Depois volte ao cliente para adicionar a validade.", "ok");
+}
+
+function productAlreadyLinked(clientId, productCode){
+  return expirations.some(e => e.clientId===clientId && normalizeCode(e.productCode)===normalizeCode(productCode));
+}
+
+$("expProduct").addEventListener("change", renderExpProductPreview);
+$("openQuickProduct").onclick = openQuickProduct;
 
 $("addExpBtn").onclick = () => {
-  const code = $("expProduct").value;
+  const code = normalizeCode($("expProduct").value);
   const date = $("expDate").value;
-  if(!code) { alert("Selecione um produto."); return; }
-  if(!date) { alert("Selecione a data de vencimento."); return; }
-  
-  expirations.push({
-    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-    clientId: currentClientId,
-    productCode: code,
-    date: date
-  });
+  if(!currentClientId){ alert("Selecione um cliente primeiro."); return; }
+  if(!code){ alert("Selecione um produto."); return; }
+  if(!date){ alert("Selecione a data de vencimento."); return; }
+
+  // O mesmo produto pode existir em vários clientes. Dentro do mesmo cliente,
+  // atualizar a validade evita registros duplicados e preserva o produto do catálogo.
+  const existing = expirations.find(e => e.clientId===currentClientId && normalizeCode(e.productCode)===code);
+  if(existing){
+    if(!confirm("Este produto já está neste cliente. Deseja atualizar a data de validade?")) return;
+    existing.date = date;
+  }else{
+    expirations.push({
+      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+      clientId: currentClientId,
+      productCode: code,
+      date
+    });
+  }
   $("expDate").value = "";
-  $("expProduct").value = "";
   saveExpirations();
 };
-
 
 function deleteExp(id){
   if(!confirm("Remover esta validade?")) return;
@@ -590,15 +668,20 @@ function deleteExp(id){
 function renderHomeExpirations(){
   const list = $("homeExpirationsList");
   const sorted = [...expirations].sort((a,b) => new Date(a.date+"T00:00:00") - new Date(b.date+"T00:00:00"));
+  const today = new Date(); today.setHours(0,0,0,0);
+  const horizon = new Date(today); horizon.setDate(horizon.getDate()+30);
+  const relevant = sorted.filter(e => {
+    const d = new Date(e.date+"T00:00:00");
+    return d <= horizon;
+  });
 
 
-  if(!sorted.length) {
-    list.innerHTML = '<div class="empty">Nenhum produto próximo do vencimento.</div>';
+  if(!relevant.length) {
+    list.innerHTML = '<div class="empty">Nenhum produto vencido ou com vencimento nos próximos 30 dias.</div>';
     return;
   }
 
-
-  list.innerHTML = sorted.slice(0, 10).map(e => {
+  list.innerHTML = relevant.slice(0, 20).map(e => {
     const p = findProduct(e.productCode) || {name: "Produto Excluído"};
     const c = clients.find(x => x.id === e.clientId) || {name: "Cliente Excluído"};
     
@@ -961,8 +1044,6 @@ $("printLabelsBtn").onclick=()=>{
 };
 
 
-const _saveAll=saveAll;
-saveAll=function(){_saveAll();populateLabelProducts();};
 populateLabelProducts();
 </script>
 </div>
