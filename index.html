@@ -1,637 +1,391 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sistema de Impressão de Etiquetas EAN-13 (4 Colunas)</title>
-  <style>
-    /* Reset & Variáveis */
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    }
-    body {
-      background-color: #f4f6f9;
-      color: #333;
-      padding: 20px;
-    }
-    /* Layout da Aplicação (Tela) */
-    .app-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-    }
-    @media (max-width: 900px) {
-      .app-container {
-        grid-template-columns: 1fr;
-      }
-    }
-    .card {
-      background: #ffffff;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      margin-bottom: 20px;
-    }
-    .card h2 {
-      font-size: 1.25rem;
-      margin-bottom: 15px;
-      color: #2c3e50;
-      border-bottom: 2px solid #eef2f5;
-      padding-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    /* Form & Inputs */
-    .form-group {
-      margin-bottom: 12px;
-    }
-    .form-group label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 600;
-      margin-bottom: 4px;
-      color: #555;
-    }
-    .form-control {
-      width: 100%;
-      padding: 8px 12px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 0.95rem;
-    }
-    .form-control:focus {
-      border-color: #3498db;
-      outline: none;
-    }
-    .btn {
-      padding: 8px 16px;
-      border: none;
-      border-radius: 4px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s ease;
-      font-size: 0.9rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .btn-primary {
-      background-color: #3498db;
-      color: white;
-    }
-    .btn-primary:hover {
-      background-color: #2980b9;
-    }
-    .btn-success {
-      background-color: #2ecc71;
-      color: white;
-    }
-    .btn-success:hover {
-      background-color: #27ae60;
-    }
-    .btn-danger {
-      background-color: #e74c3c;
-      color: white;
-    }
-    .btn-danger:hover {
-      background-color: #c0392b;
-    }
-    .btn-secondary {
-      background-color: #95a5a6;
-      color: white;
-    }
-    .btn-secondary:hover {
-      background-color: #7f8c8d;
-    }
-    .btn-sm {
-      padding: 4px 8px;
-      font-size: 0.8rem;
-    }
-    /* Listas e Tabelas */
-    .table-container {
-      max-height: 320px;
-      overflow-y: auto;
-      border: 1px solid #e0e0e0;
-      border-radius: 4px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9rem;
-    }
-    th, td {
-      padding: 10px;
-      text-align: left;
-      border-bottom: 1px solid #eee;
-      vertical-align: middle;
-    }
-    th {
-      background-color: #f8f9fa;
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      font-weight: 600;
-    }
-    /* Fila de Impressão */
-    .queue-list {
-      list-style: none;
-      max-height: 400px;
-      overflow-y: auto;
-      border: 1px solid #eee;
-      border-radius: 4px;
-    }
-    .queue-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px;
-      border-bottom: 1px solid #eee;
-      background: #fff;
-    }
-    .queue-item:nth-child(even) {
-      background-color: #fafafa;
-    }
-    .queue-info {
-      flex: 1;
-    }
-    .queue-info strong {
-      display: block;
-      font-size: 0.95rem;
-    }
-    .queue-info span {
-      font-size: 0.8rem;
-      color: #666;
-    }
-    .queue-controls {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .copias-input {
-      width: 60px;
-      text-align: center;
-      padding: 4px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 0.9rem;
-    }
-    /* Preview em Tela */
-    .preview-section {
-      grid-column: 1 / -1;
-    }
-    .grid-etiquetas-4-colunas {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      background: #fff;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-    }
-    .etiqueta-card {
-      border: 1px dashed #bbb;
-      padding: 8px 4px;
-      text-align: center;
-      background: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      border-radius: 4px;
-      min-height: 95px;
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-    .etiqueta-card .nome-produto {
-      font-size: 11px;
-      font-weight: bold;
-      color: #000;
-      margin-bottom: 3px;
-      text-transform: uppercase;
-      max-width: 100%;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .etiqueta-card .preco-produto {
-      font-size: 10px;
-      color: #333;
-      margin-top: 2px;
-      font-weight: 600;
-    }
-    .barcode-svg {
-      width: 100%;
-      max-width: 180px;
-      height: 45px;
-    }
-    /* Estilos de Impressão Papel (A4) */
-    @media print {
-      body * {
-        visibility: hidden;
-      }
-      .no-print {
-        display: none !important;
-      }
-      #area-impressao, #area-impressao * {
-        visibility: visible;
-      }
-      #area-impressao {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        padding: 0;
-        margin: 0;
-      }
-      .grid-etiquetas-4-colunas {
-        display: grid !important;
-        grid-template-columns: repeat(4, 1fr) !important;
-        gap: 4mm !important;
-        padding: 0 !important;
-        border: none !important;
-        background: transparent !important;
-      }
-      .etiqueta-card {
-        border: 1px solid #ddd !important;
-        padding: 4px 2px !important;
-        min-height: 80px !important;
-        box-shadow: none !important;
-      }
-      @page {
-        size: A4 portrait;
-        margin: 8mm;
-      }
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Catálogo de Produtos</title>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{--bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#6b7280;--primary:#2563eb;--danger:#dc2626;--ok:#15803d;--border:#d1d5db}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{position:sticky;top:0;z-index:5;background:#111827;color:#fff;padding:14px 16px}
+header h1{font-size:20px;margin:0 0 4px}header p{margin:0;color:#d1d5db;font-size:13px}
+nav{position:sticky;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border-top:1px solid var(--border)}
+nav button{border:0;background:#fff;padding:12px 6px;font-size:13px;color:#374151}
+nav button.active{color:var(--primary);font-weight:700}
+main{max-width:720px;margin:auto;padding:16px 16px 90px}
+.page{display:none}.page.active{display:block}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px #00000008}
+h2{font-size:20px;margin:0 0 12px}h3{font-size:17px;margin:0 0 10px}
+label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}
+input{width:100%;padding:13px;border:1px solid var(--border);border-radius:10px;font-size:16px;background:#fff}
+button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:700;cursor:pointer}
+.primary{background:var(--primary);color:#fff}.secondary{background:#e5e7eb;color:#111827}.danger{background:#fee2e2;color:#991b1b}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:130px}
+.big{width:100%;padding:15px;font-size:17px}
+.status{padding:12px;border-radius:10px;margin-top:10px;display:none}
+.status.show{display:block}.status.ok{background:#dcfce7;color:#166534}.status.warn{background:#fef3c7;color:#92400e}.status.err{background:#fee2e2;color:#991b1b}
+.product{display:grid;grid-template-columns:76px 1fr;gap:12px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:10px;margin-top:9px}
+.product img{width:76px;height:76px;border-radius:10px;object-fit:cover;background:#e5e7eb}
+.product .meta{font-size:12px;color:var(--muted);word-break:break-all}
+#reader{width:100%;overflow:hidden;border-radius:14px;background:#000;min-height:100px}
+#reader video{border-radius:14px}
+.scanner-actions{display:flex;gap:8px;margin-top:10px}.scanner-actions button{flex:1}
+.camera-note{font-size:12px;color:var(--muted);margin-top:8px}
+.preview{max-width:180px;max-height:180px;border-radius:12px;object-fit:cover;display:none;margin-top:10px}
+.empty{color:var(--muted);text-align:center;padding:20px}
+.hidden{display:none!important}
+.modal{position:fixed;inset:0;background:#000b;z-index:20;display:none;align-items:flex-end;justify-content:center}
+.modal.open{display:flex}
+.sheet{background:#fff;width:100%;max-width:720px;border-radius:20px 20px 0 0;padding:16px;max-height:92vh;overflow:auto}
+.sheet h2{margin-bottom:8px}
+.small{font-size:12px;color:var(--muted)}
+.file{padding:10px 0}
+</style>
 </head>
 <body>
-  <div class="app-container no-print">
-    <!-- LADO ESQUERDO: CADASTRO E PRODUTOS DISPONÍVEIS COM BUSCA FUZZY -->
-    <div>
-      <div class="card">
-        <h2>Cadastrar Produto</h2>
-        <form id="form-produto">
-          <div class="form-group">
-            <label for="prod-nome">Nome do Produto</label>
-            <input type="text" id="prod-nome" class="form-control" placeholder="Ex: Arroz Tipo 1 - 5kg" required>
-          </div>
-          <div style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex: 2;">
-              <label for="prod-ean">Código EAN-13 (13 dígitos)</label>
-              <input type="text" id="prod-ean" class="form-control" maxlength="13" placeholder="7891234567890" required pattern="[0-9]{13}">
-            </div>
-            <div class="form-group" style="flex: 1;">
-              <label for="prod-preco">Preço (R$)</label>
-              <input type="number" step="0.01" id="prod-preco" class="form-control" placeholder="0.00">
-            </div>
-          </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%;">+ Adicionar ao Catálogo</button>
-        </form>
-      </div>
+<header>
+  <h1>📦 Catálogo de Produtos</h1>
+  <p>Escaneie, consulte e cadastre produtos pelo código de barras.</p>
+</header>
 
-      <div class="card">
-        <h2>
-          <span>Catálogo de Produtos</span>
-        </h2>
-        <div class="form-group">
-          <label for="input-fuzzy">🔍 Busca Inteligente / Fuzzy:</label>
-          <input 
-            type="text" 
-            id="input-fuzzy" 
-            class="form-control" 
-            placeholder="Digite nome, código EAN ou preço..." 
-            oninput="filtrarEExibirCatalogo()"
-          >
-        </div>
-        <div class="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Produto</th>
-                <th>EAN-13</th>
-                <th>Preço</th>
-                <th style="width: 70px;">Qtd.</th>
-                <th style="width: 130px;">Ações</th>
-              </tr>
-            </thead>
-            <tbody id="tabela-produtos">
-              <!-- Preenchido via JavaScript -->
-            </tbody>
-          </table>
-        </div>
+<main>
+  <section id="page-scan" class="page active">
+    <div class="card">
+      <h2>🔎 Escanear produto</h2>
+      <button class="primary big" id="openScanMain">📷 Abrir câmera e escanear</button>
+      <div class="camera-note">Ao tocar no botão, o navegador deve pedir autorização para usar a câmera. O site precisa estar aberto por HTTPS.</div>
+      <label for="mainCode">Ou digite o código de barras</label>
+      <div class="row">
+        <input id="mainCode" inputmode="numeric" placeholder="Ex.: 7891234567890">
+        <button class="secondary" id="lookupMain">Consultar</button>
       </div>
+      <div id="mainStatus" class="status"></div>
     </div>
+    <div id="mainResult" class="card hidden"></div>
+  </section>
 
-    <!-- LADO DIREITO: FILA DE IMPRESSÃO E REORDENAÇÃO -->
-    <div>
-      <div class="card">
-        <h2>
-          <span>Fila de Impressão (Ordenação)</span>
-          <button class="btn btn-danger btn-sm" onclick="limparFila()">Limpar Fila</button>
-        </h2>
-        <p style="font-size: 0.85rem; color: #666; margin-bottom: 12px;">
-          Adicione produtos do catálogo com a quantidade desejada. Ajuste as cópias e use as setas (▲/▼) para definir a ordem exata nas 4 colunas.
-        </p>
-        <ul class="queue-list" id="lista-fila">
-          <!-- Itens da fila gerados via JS -->
-        </ul>
-        <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
-          <strong id="total-etiquetas-txt">Total de Etiquetas: 0</strong>
-          <button class="btn btn-success" onclick="imprimirDirectamente()">
-            🖨️ Imprimir Etiquetas
-          </button>
-        </div>
+  <section id="page-register" class="page">
+    <div class="card">
+      <h2>➕ Cadastrar produto</h2>
+      <button class="primary big" id="openScanRegister">📷 Escanear código pela câmera</button>
+      <div class="camera-note">Ao ler o código, ele será colocado abaixo e o nome será buscado automaticamente na internet.</div>
+
+      <label for="regCode">Código de barras</label>
+      <input id="regCode" inputmode="numeric" placeholder="Digite ou escaneie o código">
+
+      <label for="regName">Nome do produto</label>
+      <input id="regName" placeholder="Nome do produto">
+
+      <label for="regImage">Imagem do produto</label>
+      <input id="regImage" type="file" accept="image/*" class="file">
+      <img id="regPreview" class="preview" alt="Prévia da imagem">
+
+      <div class="row" style="margin-top:12px">
+        <button class="secondary" id="lookupRegister">🔎 Buscar produto</button>
+        <button class="primary" id="saveRegister">💾 Cadastrar</button>
       </div>
+      <div id="regStatus" class="status"></div>
     </div>
+  </section>
 
-    <!-- PREVIEW EM TELA DAS ETIQUETAS (4 COLUNAS) -->
-    <div class="card preview-section">
-      <h2> Pré-visualização da Folha (4 Colunas)</h2>
-      <div id="area-impressao">
-        <div class="grid-etiquetas-4-colunas" id="grid-preview">
-          <!-- Etiquetas geradas em tempo real -->
-        </div>
-      </div>
+  <section id="page-list" class="page">
+    <div class="card">
+      <h2>📋 Produtos cadastrados</h2>
+      <input id="listSearch" placeholder="Pesquisar por nome ou código">
+      <div id="productList"></div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-page="scan" class="active">🔎 Escanear</button>
+  <button data-page="register">➕ Cadastrar</button>
+  <button data-page="list">📋 Catálogo</button>
+</nav>
+
+<div id="scannerModal" class="modal">
+  <div class="sheet">
+    <h2>📷 Escanear código</h2>
+    <div class="small">Aponte a câmera para o código de barras.</div>
+    <div id="reader" style="margin-top:12px"></div>
+    <div id="scanStatus" class="status"></div>
+    <div class="scanner-actions">
+      <button class="secondary" id="closeScanner">Fechar</button>
+      <button class="primary" id="retryScanner">🔄 Tentar novamente</button>
     </div>
   </div>
+</div>
 
-  <script>
-    // --- ESTADO DA APLICAÇÃO ---
-    let catalogoProdutos = [
-      { id: 1, nome: "Café Torrado e Moído 500g", ean: "7891234567890", preco: "18.90" },
-      { id: 2, nome: "Açúcar Refinado 1kg", ean: "7899876543210", preco: "4.50" },
-      { id: 3, nome: "Leite Integral 1L", ean: "7896000123456", preco: "5.29" },
-      { id: 4, nome: "Biscoito Recheado 140g", ean: "7891000987654", preco: "3.75" },
-      { id: 5, nome: "Óleo de Soja 900ml", ean: "7892000112233", preco: "7.80" }
-    ];
+<script>
+const STORAGE_KEY = "catalogo_produtos_v1";
+let products = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+let scanner = null;
+let scannerTarget = "main";
+let scannerRunning = false;
+let pendingImageData = "";
 
-    // Fila de Impressão: [{ idProduto, copias }]
-    let filaImpressao = [
-      { idProduto: 1, copias: 4 },
-      { idProduto: 2, copias: 2 },
-      { idProduto: 3, copias: 3 }
-    ];
+const $ = id => document.getElementById(id);
+const normalizeCode = v => String(v || "").replace(/\D/g,"").trim();
 
-    // --- BUSCA FUZZY / INTELIGENTE ---
-    function fuzzyMatch(texto, busca) {
-      if (!busca) return true;
-      const normalizar = str => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-      
-      const textoNorm = normalizar(texto);
-      const buscaNorm = normalizar(busca).trim();
-      
-      const termos = buscaNorm.split(/\s+/);
-      return termos.every(termo => textoNorm.includes(termo));
-    }
+function saveAll(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(products)); renderList(); }
 
-    // --- GERADOR DE EAN-13 EM SVG (PURE JS, SEM DEPENDÊNCIAS EXTERNAS) ---
-    const EAN13_PATTERNS = {
-      L: ["0001101", "0011001", "0010011", "0111101", "0100011", "0110001", "0101111", "0111011", "0110111", "0001011"],
-      G: ["0100111", "0110011", "0011011", "0100001", "0011101", "0111001", "0000101", "0010001", "0001001", "0010111"],
-      R: ["1110010", "1100110", "1101100", "1000010", "1011000", "1001110", "1010000", "1000100", "1001000", "1110100"]
+function showStatus(el, msg, type="ok"){
+  el.textContent = msg;
+  el.className = "status show " + type;
+}
+function hideStatus(el){ el.className = "status"; el.textContent=""; }
+
+function findProduct(code){
+  code = normalizeCode(code);
+  return products.find(p => normalizeCode(p.code) === code);
+}
+
+function goPage(name){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  $("page-"+name).classList.add("active");
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active", b.dataset.page===name));
+  if(name==="list") renderList();
+}
+
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>goPage(b.dataset.page)));
+
+async function lookupOnline(code){
+  code = normalizeCode(code);
+  if(!code) return null;
+  try{
+    const r = await fetch("https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json", {headers:{Accept:"application/json"}});
+    if(!r.ok) return null;
+    const d = await r.json();
+    if(d.status !== 1 || !d.product) return null;
+    const p = d.product;
+    return {
+      name: p.product_name || p.product_name_pt || p.generic_name || "",
+      image: p.image_front_url || p.image_url || ""
     };
-    const PARITY_MAP = [
-      "LLLLLL", "LLGLGG", "LLGGLG", "LLGGGL", "LGLLGG",
-      "LGGLLG", "LGGGLL", "LGLGLG", "LGLGGL", "LGGLGL"
-    ];
+  }catch(e){ return null; }
+}
 
-    function gerarSVGBarraEAN13(codigo) {
-      let clean = codigo.replace(/\D/g, '');
-      if (clean.length < 13) clean = clean.padEnd(13, '0');
-      clean = clean.substring(0, 13);
-      
-      const firstDigit = parseInt(clean[0]);
-      const parityPattern = PARITY_MAP[firstDigit];
-      let bits = "101";
+function fillRegister(code, online){
+  $("regCode").value = code;
+  if(online){
+    if(online.name) $("regName").value = online.name;
+    if(online.image && !pendingImageData) {
+      $("regPreview").src = online.image;
+      $("regPreview").style.display = "block";
+      $("regPreview").dataset.remote = online.image;
+    }
+  }
+}
 
-      for (let i = 0; i < 6; i++) {
-        const digit = parseInt(clean[i + 1]);
-        const type = parityPattern[i];
-        bits += EAN13_PATTERNS[type][digit];
-      }
-      bits += "01010";
+async function processCode(code, target){
+  code = normalizeCode(code);
+  if(!code) return;
+  const local = findProduct(code);
 
-      for (let i = 0; i < 6; i++) {
-        const digit = parseInt(clean[i + 7]);
-        bits += EAN13_PATTERNS['R'][digit];
-      }
-      bits += "101";
+  if(target === "register"){
+    $("regCode").value = code;
+    if(local){
+      showStatus($("regStatus"), 'produto ja cadastrado "' + local.name + '"', "warn");
+      $("regName").value = local.name || "";
+      if(local.image){ $("regPreview").src=local.image; $("regPreview").style.display="block"; }
+      return;
+    }
+    showStatus($("regStatus"), "Código lido. Buscando o produto na internet...", "ok");
+    const online = await lookupOnline(code);
+    if(online){
+      fillRegister(code, online);
+      showStatus($("regStatus"), online.name ? "Produto encontrado e preenchido automaticamente." : "Produto encontrado, mas sem nome disponível.", "ok");
+    }else{
+      showStatus($("regStatus"), "Código lido. Não encontrei o produto na internet; digite o nome para cadastrar.", "warn");
+    }
+    goPage("register");
+    return;
+  }
 
-      const barWidth = 1.6;
-      const height = 40;
-      const fontHeight = 11;
-      const totalWidth = bits.length * barWidth + 16;
-      const totalHeight = height + fontHeight + 2;
+  $("mainCode").value = code;
+  if(local){
+    renderMainLocal(local);
+    return;
+  }
+  showStatus($("mainStatus"), "Consultando o produto na internet...", "ok");
+  const online = await lookupOnline(code);
+  if(online){
+    $("mainResult").classList.remove("hidden");
+    $("mainResult").innerHTML = `
+      <h3>Produto encontrado</h3>
+      <div class="product">
+        ${online.image ? `<img src="${escapeHtml(online.image)}" alt="">` : `<div style="width:76px;height:76px;background:#e5e7eb;border-radius:10px"></div>`}
+        <div><strong>${escapeHtml(online.name || "Sem nome")}</strong><div class="meta">Código: ${escapeHtml(code)}</div></div>
+      </div>
+      <button class="primary big" style="margin-top:12px" id="useFoundProduct">➕ Cadastrar este produto</button>`;
+    $("useFoundProduct").onclick=()=>{
+      goPage("register");
+      fillRegister(code, online);
+      hideStatus($("regStatus"));
+    };
+    showStatus($("mainStatus"), "Produto encontrado.", "ok");
+  }else{
+    $("mainResult").classList.remove("hidden");
+    $("mainResult").innerHTML = `<h3>Produto não encontrado</h3><p class="small">Não encontrei esse código na internet. Você pode cadastrar manualmente.</p><button class="primary big" id="registerUnknown">➕ Cadastrar produto</button>`;
+    $("registerUnknown").onclick=()=>{goPage("register");$("regCode").value=code;};
+    showStatus($("mainStatus"), "Não encontrei esse produto na internet.", "warn");
+  }
+}
 
-      let rects = '';
-      for (let i = 0; i < bits.length; i++) {
-        if (bits[i] === '1') {
-          const x = 8 + i * barWidth;
-          const isGuard = (i < 3) || (i >= 45 && i <= 49) || (i >= 92);
-          const barH = isGuard ? height + 4 : height;
-          rects += `<rect x="${x.toFixed(1)}" y="0" width="${barWidth}" height="${barH}" fill="#000" />`;
-        }
-      }
+function renderMainLocal(p){
+  $("mainResult").classList.remove("hidden");
+  $("mainResult").innerHTML = `
+    <div class="status show warn">produto ja cadastrado "${escapeHtml(p.name)}"</div>
+    <div class="product">
+      ${p.image ? `<img src="${escapeHtml(p.image)}" alt="">` : `<div style="width:76px;height:76px;background:#e5e7eb;border-radius:10px"></div>`}
+      <div><strong>${escapeHtml(p.name)}</strong><div class="meta">Código: ${escapeHtml(p.code)}</div></div>
+    </div>`;
+  hideStatus($("mainStatus"));
+}
 
-      return `
-        <svg class="barcode-svg" viewBox="0 0 ${totalWidth} ${totalHeight}" xmlns="http://www.w3.org/2000/svg">
-          <g>${rects}</g>
-          <text x="${totalWidth / 2}" y="${height + fontHeight}" font-family="monospace" font-size="10" font-weight="bold" text-anchor="middle" fill="#000">
-            ${clean[0]} ${clean.substring(1,7)} ${clean.substring(7,13)}
-          </text>
-        </svg>
-      `;
+$("lookupMain").onclick=()=>processCode($("mainCode").value,"main");
+$("mainCode").addEventListener("keydown",e=>{if(e.key==="Enter")processCode(e.target.value,"main")});
+$("lookupRegister").onclick=async()=>{
+  const code=normalizeCode($("regCode").value);
+  if(!code){showStatus($("regStatus"),"Digite ou escaneie um código.","warn");return;}
+  await processCode(code,"register");
+};
+
+$("regImage").addEventListener("change", async e=>{
+  const file=e.target.files?.[0];
+  if(!file)return;
+  try{
+    pendingImageData=await compressImage(file);
+    $("regPreview").src=pendingImageData;
+    $("regPreview").style.display="block";
+    delete $("regPreview").dataset.remote;
+  }catch(err){showStatus($("regStatus"),"Não foi possível carregar a imagem.","err")}
+});
+
+function compressImage(file){
+  return new Promise((resolve,reject)=>{
+    const img=new Image(), url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const max=900, scale=Math.min(1,max/Math.max(img.width,img.height));
+      const c=document.createElement("canvas");
+      c.width=Math.max(1,Math.round(img.width*scale)); c.height=Math.max(1,Math.round(img.height*scale));
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg",.8));
+    };
+    img.onerror=reject; img.src=url;
+  });
+}
+
+$("saveRegister").onclick=()=>{
+  const code=normalizeCode($("regCode").value);
+  const name=$("regName").value.trim();
+  if(!code){showStatus($("regStatus"),"Informe ou escaneie o código de barras.","warn");return;}
+  const existing=findProduct(code);
+  if(existing){showStatus($("regStatus"),'produto ja cadastrado "'+existing.name+'"',"warn");return;}
+  if(!name){showStatus($("regStatus"),"Informe o nome do produto.","warn");return;}
+  const img=pendingImageData || $("regPreview").dataset.remote || "";
+  products.push({id:crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),code,name,image:img,createdAt:new Date().toISOString()});
+  saveAll();
+  showStatus($("regStatus"),'Produto cadastrado: "'+name+'"',"ok");
+  $("regName").value=""; $("regCode").value=""; $("regImage").value=""; pendingImageData="";
+  $("regPreview").style.display="none"; delete $("regPreview").dataset.remote;
+};
+
+function renderList(){
+  const q=$("listSearch").value.trim().toLowerCase();
+  const arr=products.filter(p=>!q || p.name.toLowerCase().includes(q) || p.code.includes(q));
+  if(!arr.length){$("productList").innerHTML='<div class="empty">Nenhum produto cadastrado.</div>';return;}
+  $("productList").innerHTML=arr.map(p=>`
+    <div class="product">
+      ${p.image?`<img src="${escapeHtml(p.image)}" alt="">`:`<div style="width:76px;height:76px;background:#e5e7eb;border-radius:10px"></div>`}
+      <div><strong>${escapeHtml(p.name)}</strong><div class="meta">${escapeHtml(p.code)}</div>
+      <button class="danger" style="margin-top:7px;padding:7px 10px;font-size:12px" data-delete="${escapeHtml(p.id)}">Excluir</button></div>
+    </div>`).join("");
+  document.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>{
+    const p=products.find(x=>x.id===b.dataset.delete);
+    if(p && confirm('Excluir "'+p.name+'"?')){products=products.filter(x=>x.id!==p.id);saveAll();}
+  });
+}
+$("listSearch").addEventListener("input",renderList);
+
+function escapeHtml(s){
+  return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+
+async function startScanner(target){
+  scannerTarget=target;
+  $("scannerModal").classList.add("open");
+  hideStatus($("scanStatus"));
+  $("reader").innerHTML="";
+
+  if(!window.isSecureContext || !navigator.mediaDevices?.getUserMedia){
+    showStatus($("scanStatus"),
+      "A câmera do celular só funciona em HTTPS. Abra este site por um link HTTPS (não pelo arquivo HTML).",
+      "err");
+    return;
+  }
+
+  if(!window.Html5Qrcode){
+    showStatus($("scanStatus"),"O leitor de código não carregou. Verifique sua internet e tente novamente.","err");
+    return;
+  }
+
+  try{
+    // A solicitação de permissão acontece diretamente após o toque no botão.
+    // Não abrimos e fechamos um stream antes, pois isso pode impedir alguns
+    // navegadores móveis de exibir corretamente o pedido de autorização.
+    scanner=new Html5Qrcode("reader");
+
+    await scanner.start(
+      {facingMode:"environment"},
+      {fps:12,qrbox:{width:280,height:140},aspectRatio:1.777},
+      async decoded=>{
+        const code=normalizeCode(decoded);
+        if(!code)return;
+        await stopScanner();
+        await processCode(code,scannerTarget);
+      },
+      ()=>{}
+    );
+
+    scannerRunning=true;
+    showStatus($("scanStatus"),"Câmera ativa. Aponte para o código de barras.","ok");
+  }catch(e){
+    scannerRunning=false;
+    let msg="Não consegui abrir a câmera. Verifique se o navegador tem acesso à câmera e tente novamente.";
+
+    if(e?.name==="NotAllowedError"){
+      msg="O acesso à câmera foi bloqueado. Toque no cadeado/ícone de câmera ao lado do endereço do site, permita a câmera e toque em 'Tentar novamente'.";
+    }else if(e?.name==="NotFoundError"){
+      msg="Nenhuma câmera foi encontrada neste aparelho.";
+    }else if(e?.name==="NotReadableError"){
+      msg="A câmera está sendo usada por outro aplicativo. Feche outros apps que estejam usando a câmera e tente novamente.";
+    }else if(e?.name==="SecurityError"){
+      msg="O navegador bloqueou a câmera por segurança. Abra o site usando HTTPS.";
+    }else if(e?.message?.toLowerCase().includes("permission")){
+      msg="O navegador não permitiu o acesso à câmera. Autorize a câmera nas configurações do site e tente novamente.";
     }
 
-    // --- FUNÇÕES DE RENDERIZAÇÃO DA INTERFACE ---
+    showStatus($("scanStatus"),msg,"err");
+    if(scanner){try{await scanner.clear()}catch(_){} scanner=null;}
+  }
+}
 
-    function filtrarEExibirCatalogo() {
-      const termo = document.getElementById('input-fuzzy') ? document.getElementById('input-fuzzy').value : '';
-      const tbody = document.getElementById('tabela-produtos');
-      tbody.innerHTML = '';
+async function stopScanner(){
+  if(scanner){
+    try{if(scannerRunning) await scanner.stop()}catch(_){}
+    try{await scanner.clear()}catch(_){}
+  }
+  scanner=null; scannerRunning=false;
+  $("reader").innerHTML="";
+  $("scannerModal").classList.remove("open");
+}
 
-      const filtrados = catalogoProdutos.filter(prod => 
-        fuzzyMatch(`${prod.nome} ${prod.ean} ${prod.preco}`, termo)
-      );
-
-      if (filtrados.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">Nenhum produto encontrado.</td></tr>';
-        return;
-      }
-
-      filtrados.forEach(prod => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>${prod.nome}</strong></td>
-          <td><code>${prod.ean}</code></td>
-          <td>${prod.preco ? 'R$ ' + parseFloat(prod.preco).toFixed(2) : '-'}</td>
-          <td>
-            <input type="number" id="qtd_cat_${prod.id}" class="copias-input" value="1" min="1" max="100">
-          </td>
-          <td style="display: flex; gap: 4px;">
-            <button class="btn btn-primary btn-sm" onclick="adicionarComQuantidade(${prod.id})" title="Adicionar à fila com a quantidade informada">+ Fila</button>
-            <button class="btn btn-success btn-sm" onclick="imprimirDiretoDoCatalogo(${prod.id})" title="Adicionar à fila e imprimir imediatamente">🖨️</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
-
-    function renderizarFila() {
-      const ul = document.getElementById('lista-fila');
-      ul.innerHTML = '';
-
-      if (filaImpressao.length === 0) {
-        ul.innerHTML = '<li style="padding: 15px; text-align: center; color: #888;">Nenhum produto selecionado para impressão.</li>';
-        renderizarEtiquetasGrid();
-        return;
-      }
-
-      filaImpressao.forEach((item, index) => {
-        const produto = catalogoProdutos.find(p => p.id === item.idProduto);
-        if (!produto) return;
-
-        const li = document.createElement('li');
-        li.className = 'queue-item';
-        li.innerHTML = `
-          <div class="queue-info">
-            <strong>${index + 1}. ${produto.nome}</strong>
-            <span>EAN: ${produto.ean} ${produto.preco ? '| R$ ' + parseFloat(produto.preco).toFixed(2) : ''}</span>
-          </div>
-          <div class="queue-controls">
-            <label style="font-size: 0.8rem; margin-right: 2px;">Cóp.:</label>
-            <input type="number" class="copias-input" value="${item.copias}" min="1" max="100" onchange="alterarCopias(${index}, this.value)">
-            <button class="btn btn-secondary btn-sm" onclick="moverFila(${index}, -1)" ${index === 0 ? 'disabled' : ''} title="Mover para cima">▲</button>
-            <button class="btn btn-secondary btn-sm" onclick="moverFila(${index}, 1)" ${index === filaImpressao.length - 1 ? 'disabled' : ''} title="Mover para baixo">▼</button>
-            <button class="btn btn-danger btn-sm" onclick="removerDaFila(${index})" title="Remover item">✖</button>
-          </div>
-        `;
-        ul.appendChild(li);
-      });
-
-      renderizarEtiquetasGrid();
-    }
-
-    function renderizarEtiquetasGrid() {
-      const grid = document.getElementById('grid-preview');
-      grid.innerHTML = '';
-
-      let totalEtiquetas = 0;
-
-      filaImpressao.forEach(item => {
-        const produto = catalogoProdutos.find(p => p.id === item.idProduto);
-        if (!produto) return;
-
-        for (let i = 0; i < item.copias; i++) {
-          totalEtiquetas++;
-          const card = document.createElement('div');
-          card.className = 'etiqueta-card';
-          const svgCode = gerarSVGBarraEAN13(produto.ean);
-          
-          card.innerHTML = `
-            <div class="nome-produto">${produto.nome}</div>
-            ${svgCode}
-            ${produto.preco ? `<div class="preco-produto">R$ ${parseFloat(produto.preco).toFixed(2)}</div>` : ''}
-          `;
-          grid.appendChild(card);
-        }
-      });
-
-      document.getElementById('total-etiquetas-txt').innerText = `Total de Etiquetas: ${totalEtiquetas}`;
-    }
-
-    document.getElementById('form-produto').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const nome = document.getElementById('prod-nome').value.trim();
-      const ean = document.getElementById('prod-ean').value.trim();
-      const preco = document.getElementById('prod-preco').value;
-
-      if (ean.length !== 13) {
-        alert("O código EAN-13 precisa ter exatamente 13 dígitos numéricos.");
-        return;
-      }
-
-      const novoProd = {
-        id: Date.now(),
-        nome,
-        ean,
-        preco: preco ? parseFloat(preco).toFixed(2) : ""
-      };
-
-      catalogoProdutos.push(novoProd);
-      filtrarEExibirCatalogo();
-      adicionarAFila(novoProd.id, 1);
-      this.reset();
-    });
-
-    function adicionarComQuantidade(idProduto) {
-      const input = document.getElementById(`qtd_cat_${idProduto}`);
-      const qtd = input ? parseInt(input.value) || 1 : 1;
-      adicionarAFila(idProduto, qtd);
-    }
-
-    function imprimirDiretoDoCatalogo(idProduto) {
-      const input = document.getElementById(`qtd_cat_${idProduto}`);
-      const qtd = input ? parseInt(input.value) || 1 : 1;
-      adicionarAFila(idProduto, qtd);
-      imprimirDirectamente();
-    }
-
-    function adicionarAFila(idProduto, quantidade = 1) {
-      const itemExistente = filaImpressao.find(item => item.idProduto === idProduto);
-      if (itemExistente) {
-        itemExistente.copias += quantidade;
-      } else {
-        filaImpressao.push({ idProduto, copias: quantidade });
-      }
-      renderizarFila();
-    }
-
-    function alterarCopias(index, novaQtd) {
-      const val = parseInt(novaQtd);
-      if (isNaN(val) || val < 1) {
-        filaImpressao[index].copias = 1;
-      } else {
-        filaImpressao[index].copias = val;
-      }
-      renderizarFila();
-    }
-
-    function moverFila(index, direcao) {
-      const novoIndex = index + direcao;
-      if (novoIndex < 0 || novoIndex >= filaImpressao.length) return;
-      const temp = filaImpressao[index];
-      filaImpressao[index] = filaImpressao[novoIndex];
-      filaImpressao[novoIndex] = temp;
-      renderizarFila();
-    }
-
-    function removerDaFila(index) {
-      filaImpressao.splice(index, 1);
-      renderizarFila();
-    }
-
-    function limparFila() {
-      filaImpressao = [];
-      renderizarFila();
-    }
-
-    function imprimirDirectamente() {
-      if (filaImpressao.length === 0) {
-        alert("A fila de impressão está vazia! Adicione produtos antes de imprimir.");
-        return;
-      }
-      window.print();
-    }
-
-    filtrarEExibirCatalogo();
-    renderizarFila();
-  </script>
+window.addEventListener("beforeunload",()=>{if(scanner)try{scanner.stop()}catch(_){}});
+renderList();
+</script>
 </body>
 </html>
