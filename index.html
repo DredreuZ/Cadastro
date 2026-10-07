@@ -1,1053 +1,206 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#111827">
-<title>Catálogo de Produtos</title>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-<script>window.addEventListener("error",function(e){if(e.target&&e.target.tagName==="SCRIPT"&&e.target.src.includes("unpkg.com/html5-qrcode")){var x=document.createElement("script");x.src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js";document.head.appendChild(x);}},true);</script>
+<meta name="theme-color" content="#1565c0">
+<link rel="manifest" href="manifest.json">
+<title>Retirada de Estoque</title>
 <style>
-:root{--bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#6b7280;--primary:#2563eb;--danger:#dc2626;--ok:#15803d;--border:#d1d5db}
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
-header{position:sticky;top:0;z-index:5;background:#111827;color:#fff;padding:14px 16px}
-header h1{font-size:20px;margin:0 0 4px}header p{margin:0;color:#d1d5db;font-size:13px}
-nav{position:sticky;bottom:0;z-index:6;display:grid;grid-template-columns:repeat(5,1fr);background:#fff;border-top:1px solid var(--border)}
-nav button{border:0;background:#fff;padding:12px 6px;font-size:12px;color:#374151; display:flex; flex-direction:column; align-items:center; gap:4px;}
-nav button.active{color:var(--primary);font-weight:700}
-main{max-width:720px;margin:auto;padding:16px 16px 90px}
-.page{display:none}.page.active{display:block}
-.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px #00000008}
-h2{font-size:20px;margin:0 0 12px}h3{font-size:17px;margin:0 0 10px}
-label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}
-input, select{width:100%;padding:13px;border:1px solid var(--border);border-radius:10px;font-size:16px;background:#fff}
-button{border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:700;cursor:pointer}
-.primary{background:var(--primary);color:#fff}.secondary{background:#e5e7eb;color:#111827}.danger{background:#fee2e2;color:#991b1b}
-.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1;min-width:130px}
-.big{width:100%;padding:15px;font-size:17px}
-.status{padding:12px;border-radius:10px;margin-top:10px;display:none}
-.status.show{display:block}.status.ok{background:#dcfce7;color:#166534}.status.warn{background:#fef3c7;color:#92400e}.status.err{background:#fee2e2;color:#991b1b}
-.product{display:grid;grid-template-columns:76px 1fr;gap:12px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:10px;margin-top:9px}
-.product img{width:76px;height:76px;border-radius:10px;object-fit:cover;background:#e5e7eb}
-.product .meta{font-size:12px;color:var(--muted);word-break:break-all; margin-top:2px;}
-#reader{width:100%;overflow:hidden;border-radius:14px;background:#000;min-height:100px}
-#reader video{border-radius:14px}
-.scanner-actions{display:flex;gap:8px;margin-top:10px}.scanner-actions button{flex:1}
-.camera-note{font-size:12px;color:var(--muted);margin-top:8px}
-.preview{max-width:180px;max-height:180px;border-radius:12px;object-fit:cover;display:none;margin-top:10px}
-.empty{color:var(--muted);text-align:center;padding:20px}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f3f5f7;color:#202124}
+header{background:#1565c0;color:#fff;padding:16px;position:sticky;top:0;z-index:5}header h1{margin:0;font-size:20px}
+main{max-width:900px;margin:auto;padding:14px}.card{background:#fff;border-radius:14px;padding:14px;margin:12px 0;box-shadow:0 2px 8px #0001}
+button,input{font:inherit}button{border:0;border-radius:10px;padding:12px 15px;cursor:pointer;font-weight:700}
+.primary{background:#1565c0;color:#fff}.secondary{background:#e8eef7;color:#174a83}.danger{background:#d93025;color:#fff}.success{background:#188038;color:#fff}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}.field{margin:8px 0}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:4px}.field input{width:100%;padding:11px;border:1px solid #ccd2d8;border-radius:9px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{flex:1;min-width:140px}
+#reader{width:100%;max-width:500px;margin:auto;border-radius:12px;overflow:hidden;background:#111}
+#scanner{display:none}.hint{text-align:center;color:#666;font-size:13px;margin:8px}
+.product{display:grid;grid-template-columns:70px 1fr auto;gap:10px;align-items:center;border-bottom:1px solid #eee;padding:10px 0}
+.product img{width:65px;height:65px;object-fit:contain;border-radius:8px;background:#f1f1f1}.product small{color:#666}.qty{font-size:18px;font-weight:700}
+#modal{display:none;position:fixed;inset:0;background:#0008;z-index:20;align-items:center;justify-content:center;padding:18px}
+.modalbox{background:#fff;border-radius:18px;padding:18px;width:min(440px,100%);max-height:90vh;overflow:auto}.modalbox img{display:block;width:120px;height:120px;object-fit:contain;margin:8px auto;border-radius:12px;background:#f3f3f3}
+.total{font-size:18px;font-weight:700}.muted{color:#6b7280}.empty{text-align:center;color:#777;padding:20px}
+nav{display:flex;gap:7px;overflow:auto;margin-bottom:8px}nav button{white-space:nowrap}
 .hidden{display:none!important}
-.modal{position:fixed;inset:0;background:#000b;z-index:20;display:none;align-items:flex-end;justify-content:center}
-.modal.open{display:flex}
-.sheet{background:#fff;width:100%;max-width:720px;border-radius:20px 20px 0 0;padding:16px;max-height:92vh;overflow:auto}
-.sheet h2{margin-bottom:8px}
-.small{font-size:12px;color:var(--muted)}
-.file{padding:10px 0}
-.list-item{display:flex; justify-content:space-between; align-items:center; border:1px solid var(--border); border-radius:12px; padding:12px; margin-top:9px; cursor:pointer;}
-.search-suggestion-item{padding:10px 12px; border-bottom:1px solid var(--border); cursor:pointer; display:flex; justify-content:space-between; align-items:center;}
-.search-suggestion-item:last-child{border-bottom:none;}
-.search-suggestion-item:hover{background:#f3f4f6;}
-.search-suggestion-item .match-score{font-size:11px; color:var(--muted); background:#e5e7eb; padding:2px 6px; border-radius:4px;}
-</style>
-
-
-<style>
-.labels-preview{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.barcode-label{background:#fff;border:1px dashed #9ca3af;border-radius:8px;padding:8px;text-align:center;break-inside:avoid;min-height:145px;display:flex;flex-direction:column;justify-content:center;align-items:center}
-.barcode-label .label-name{font-size:12px;font-weight:700;line-height:1.15;margin-bottom:5px;max-width:100%;word-break:break-word}
-.barcode-label svg{width:100%;max-width:240px;height:72px}
-.barcode-label .label-code{font-family:monospace;font-size:13px;letter-spacing:1px;margin-top:2px}
-@media(max-width:420px){.labels-preview{grid-template-columns:1fr}}
-@media print{
-  @page{size:auto;margin:8mm}
-  body{background:#fff}
-  body>*:not(#v7App){display:none!important}
-  #v7App{display:block!important}
-  header,nav,main>section:not(#page-labels),#page-labels>.card:first-child{display:none!important}
-  #page-labels{display:block!important;padding:0!important}
-  #page-labels>.card:last-child{border:0;box-shadow:none;margin:0;padding:0}
-  #labelsPreview{display:grid!important;grid-template-columns:repeat(2,1fr);gap:6mm}
-  .barcode-label{border:1px solid #ddd;min-height:35mm;border-radius:0}
-}
+@media(max-width:500px){main{padding:9px}.product{grid-template-columns:58px 1fr auto}.product img{width:55px;height:55px}}
 </style>
 </head>
 <body>
-
-
-<div id="v7App" style="display:block"><header>
-  <h1>📦 Catálogo de Produtos</h1>
-  <p>Escaneie, consulte e cadastre produtos pelo código de barras.</p>
-</header>
-
-
+<header><h1>📦 Retirada de Estoque</h1></header>
 <main>
-  <section id="page-scan" class="page active">
-    <div class="card">
-      <h2>🔎 Escanear produto</h2>
-      <button class="primary big" id="openScanMain">📷 Abrir câmera</button>
-      <div class="camera-note">A câmera traseira será priorizada.</div>
-      <label for="mainCode">Ou digite o código de barras</label>
-      <div class="row">
-        <input id="mainCode" inputmode="numeric" placeholder="Ex.: 7891234567890">
-        <button class="secondary" id="lookupMain">Consultar</button>
-      </div>
-      <div id="mainStatus" class="status"></div>
-    </div>
-    <div id="mainResult" class="card hidden"></div>
+<nav>
+<button class="primary" onclick="showTab('retirada')">Nova retirada</button>
+<button class="secondary" onclick="showTab('historico')">Histórico</button>
+<button class="secondary" onclick="showTab('produtos')">Produtos</button>
+</nav>
 
+<section id="retirada">
+<div class="card">
+<div class="actions">
+<button class="primary" onclick="startScanner()">📷 Ler código</button>
+<button class="secondary" onclick="manualCode()">⌨️ Digitar código</button>
+</div>
+<div id="scanner" class="card">
+<div id="reader"></div>
+<p class="hint">Aponte a câmera traseira para o código de barras.</p>
+<button class="danger" onclick="stopScanner()">Fechar câmera</button>
+</div>
+</div>
 
-    <div class="card" id="homeExpirationsCard">
-      <h2>⏳ Produtos Perto de Vencer</h2>
-      <div id="homeExpirationsList"></div>
-    </div>
-  </section>
+<div class="card">
+<h3>Produto</h3>
+<div class="row">
+<div class="field"><label>Código</label><input id="code" inputmode="numeric" placeholder="EAN/GTIN"></div>
+<div class="field"><label>Quantidade</label><input id="qty" type="number" min="1" value="1"></div>
+</div>
+<div class="field"><label>Nome</label><input id="name" placeholder="Nome do produto"></div>
+<div class="field"><label>Imagem (URL opcional)</label><input id="image" placeholder="https://..."></div>
+<div class="actions"><button class="success" onclick="addProduct()">➕ Adicionar à retirada</button></div>
+</div>
 
+<div class="card">
+<h3>Itens da retirada</h3>
+<div id="items"></div>
+<div class="total" id="totals"></div>
+<div class="actions" style="margin-top:12px">
+<button class="primary" onclick="saveAndExport('pdf')">📄 PDF com imagens</button>
+<button class="secondary" onclick="exportCSV()">📊 Tabela CSV</button>
+<button class="secondary" onclick="exportTXT()">📝 TXT</button>
+<button class="success" onclick="finishRetirada()">💾 Salvar retirada</button>
+<button class="danger" onclick="clearCurrent()">🗑️ Limpar</button>
+</div>
+</div>
+</section>
 
-  <section id="page-register" class="page">
-    <div class="card">
-      <h2>➕ Cadastrar produto</h2><div class="v7-count">Itens cadastrados: <strong id="v7RegisterCount">0</strong></div>
-      <button class="primary big" id="openScanRegister">📷 Ler código e preencher</button>
-      <div class="camera-note">Aponte a câmera para o código de barras. O código será preenchido e o nome e a imagem serão buscados automaticamente quando disponíveis.</div>
+<section id="historico" class="hidden">
+<div class="card"><h3>Histórico de retiradas</h3><div id="history"></div></div>
+</section>
 
-
-      <label for="regCode">Código de barras</label>
-      <input id="regCode" inputmode="numeric" placeholder="Digite ou escaneie o código">
-
-
-      <label for="regName">Nome do produto</label>
-      <input id="regName" placeholder="Nome do produto">
-
-
-      <label>Imagem do produto</label>
-      <div class="row">
-        <button type="button" class="primary" id="takePhoto">📷 Tirar foto</button>
-        <button type="button" class="secondary" id="choosePhoto">🖼️ Escolher</button>
-      </div>
-      <input id="regCamera" type="file" accept="image/*" capture="environment" class="hidden">
-      <input id="regImage" type="file" accept="image/*" class="hidden">
-      <div class="camera-note">Tire foto nova ou escolha da galeria.</div>
-      <img id="regPreview" class="preview" alt="Prévia da imagem">
-
-
-      <div class="row" style="margin-top:12px">
-        <button class="secondary" id="lookupRegister">🔎 Buscar</button>
-        <button class="primary" id="saveRegister">💾 Cadastrar</button>
-      </div>
-      <div id="regStatus" class="status"></div>
-    </div>
-  </section>
-
-
-  <section id="page-list" class="page">
-    <div class="card">
-      <h2>📋 Produtos cadastrados</h2>
-      <input id="listSearch" placeholder="Pesquisar por nome ou código">
-<label>Ordenar</label><select id="v7Sort"><option value="recent">Mais recentes</option><option value="oldest">Mais antigos</option><option value="az">A–Z</option><option value="za">Z–A</option><option value="code">Código</option></select>
-      <div id="productList"></div>
-    </div>
-  </section>
-
-
-  <section id="page-validities" class="page">
-    <div class="card" id="view-clients">
-      <h2>👥 Clientes</h2>
-      <label>Adicionar Novo Cliente</label>
-      <div class="row">
-        <input id="newClientName" placeholder="Nome do cliente">
-        <button class="primary" id="addClientBtn">Adicionar</button>
-      </div>
-      <h3 style="margin-top: 20px;">Selecione um Cliente</h3>
-      <div id="clientList"></div>
-    </div>
-
-
-    <div class="card hidden" id="view-client-details">
-      <button class="secondary" id="backToClients" style="margin-bottom:12px; padding: 8px 12px; font-size:13px;">⬅ Voltar aos Clientes</button>
-      <h2 id="currentClientTitle">Cliente</h2>
-       <div class="row">
-         <button class="secondary" id="clientPhotoHint">📸 Foto do produto é preservada no catálogo</button>
-       </div>
-
-
-      <h3 style="margin-top: 16px; margin-bottom:4px;">➕ Adicionar Validade</h3>
-      <label>Produto</label>
-      <select id="expProduct"></select>
-
-
-      <label>Data de Vencimento</label>
-      <div class="row">
-        <input type="date" id="expDate">
-        <button class="primary" id="addExpBtn">Adicionar</button>
-      </div>
-
-
-      <h3 style="margin-top:24px;">⏳ Validades (Mais próximas primeiro)</h3>
-      <div id="clientExpList"></div>
-    </div>
-  </section>
-
-
-<section id="page-labels" class="page">
-  <div class="card">
-    <h2>🏷️ Gerador de etiquetas EAN-13</h2>
-    <p class="small">Pesquise o produto pelo nome (com busca tolerante a erros de digitação) ou selecione da lista.</p>
-    
-    <label for="labelSearchInput">🔍 Pesquisar produto por nome</label>
-    <input id="labelSearchInput" type="text" placeholder="Digite para pesquisar (ex: ipanema, ipsnema...)" autocomplete="off">
-    <div id="labelSearchResultsList" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; margin-top: 6px; display: none; background: #fff; box-shadow: 0 4px 12px #00000015; z-index: 10; position: relative;"></div>
-
-
-    <label for="labelProduct" style="margin-top:12px;">Produto selecionado</label>
-    <select id="labelProduct"></select>
-    <div id="labelProductInfo" class="status show warn" style="margin-top:10px">Selecione um produto.</div>
-
-
-    <label for="labelQty">Quantidade de etiquetas</label>
-    <input id="labelQty" type="number" min="1" max="200" value="1" inputmode="numeric">
-    <div class="row" style="margin-top:12px">
-      <button class="primary" id="generateLabelsBtn">🏷️ Gerar etiquetas</button>
-      <button class="secondary" id="printLabelsBtn">🖨️ Imprimir</button>
-    </div>
-    <div id="labelStatus" class="status"></div>
-  </div>
-  <div class="card">
-    <h3>Pré-visualização</h3>
-    <div id="labelsPreview" class="labels-preview"></div>
-  </div>
+<section id="produtos" class="hidden">
+<div class="card"><h3>Produtos conhecidos</h3><div id="known"></div></div>
 </section>
 </main>
 
-
-<nav>
-  <button data-page="scan" class="active"><span>🔎</span><br>Home</button>
-  <button data-page="register"><span>➕</span><br>Produto</button>
-  <button data-page="validities"><span>⏳</span><br>Validades</button>
-  <button data-page="list"><span>📋</span><br>Catálogo</button>
-  <button data-page="labels"><span>🏷️</span><br>Etiquetas</button>
-</nav>
-
-
-<div id="scannerModal" class="modal">
-  <div class="sheet">
-    <h2>📷 Escanear código</h2>
-    <div class="small">Aponte a câmera para o código de barras.</div>
-    <div id="reader" style="margin-top:12px"></div>
-    <div id="scanStatus" class="status"></div>
-    <div class="scanner-actions">
-      <button class="secondary" id="closeScanner">Fechar</button>
-      <button class="primary" id="retryScanner">🔄 Tentar novamente</button>
-    </div>
-  </div>
+<div id="modal">
+<div class="modalbox">
+<h2>Confirme o código</h2>
+<div id="modalContent"></div>
+<div class="actions">
+<button class="success" onclick="confirmScan(true)">✓ SIM, está correto</button>
+<button class="danger" onclick="confirmScan(false)">✕ NÃO</button>
+</div>
+</div>
 </div>
 
-
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
-const STORAGE_KEY = "catalogo_produtos_v2";
-const CLIENTS_KEY = STORAGE_KEY + "_clients";
-const EXPIRATIONS_KEY = STORAGE_KEY + "_expirations";
-const LEGACY_KEY = "catalogo_produtos_v1";
+let items=JSON.parse(localStorage.getItem('currentItems')||'[]');
+let history=JSON.parse(localStorage.getItem('stockHistory')||'[]');
+let known=JSON.parse(localStorage.getItem('knownProducts')||'{}');
+let scanner=null, pending=null;
 
-function readStore(key, fallback=[]){
-  try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
-  catch(e){ console.warn("Dados inválidos no armazenamento:", key, e); return fallback; }
+function save(){localStorage.setItem('currentItems',JSON.stringify(items));localStorage.setItem('stockHistory',JSON.stringify(history));localStorage.setItem('knownProducts',JSON.stringify(known));}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function showTab(t){['retirada','historico','produtos'].forEach(x=>document.getElementById(x).classList.toggle('hidden',x!==t));renderHistory();renderKnown();}
+function render(){
+ const box=document.getElementById('items');
+ if(!items.length){box.innerHTML='<div class="empty">Nenhum produto adicionado.</div>';document.getElementById('totals').textContent='';return}
+ box.innerHTML=items.map((p,i)=>`<div class="product"><img src="${esc(p.image||'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2265%22 height=%2265%22%3E%3Crect width=%22100%25%22 height=%22100%25%22 fill=%22%23eee%22/%3E%3C/svg%3E')}" onerror="this.style.visibility='hidden'"><div><b>${esc(p.name||'Produto sem nome')}</b><br><small>${esc(p.code)}</small></div><div class="qty">${p.qty}<br><button class="danger" onclick="removeItem(${i})">×</button></div></div>`).join('');
+ document.getElementById('totals').textContent=`Total de unidades: ${items.reduce((a,p)=>a+Number(p.qty),0)} • Produtos: ${items.length}`;
 }
-function writeStore(key, value){
-  try{
-    localStorage.setItem(key, JSON.stringify(value));
-  }catch(e){
-    console.error(e);
-    alert("O armazenamento do navegador está cheio. Exporte um backup e remova imagens/produtos antigos antes de continuar.");
-    throw e;
+function removeItem(i){items.splice(i,1);save();render()}
+async function lookup(code){
+ if(known[code]) return known[code];
+ try{
+  const r=await fetch('https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json');
+  const d=await r.json();
+  if(d.status===1){
+   const p=d.product||{};
+   return {code,name:p.product_name_pt||p.product_name||p.generic_name||'',image:p.image_front_url||p.image_url||''};
   }
+ }catch(e){}
+ return {code,name:'',image:''};
 }
-let products = readStore(STORAGE_KEY);
-let clients = readStore(CLIENTS_KEY);
-let expirations = readStore(EXPIRATIONS_KEY);
-
-// Migração transparente da versão anterior.
-if(!products.length){
-  const legacy = readStore(LEGACY_KEY);
-  if(Array.isArray(legacy) && legacy.length){ products = legacy; writeStore(STORAGE_KEY, products); }
+async function processCode(code){
+ code=String(code||'').replace(/\s/g,'');
+ if(!code)return;
+ pending=await lookup(code);
+ showConfirm(pending);
 }
-if(!Array.isArray(clients)) clients=[];
-if(!Array.isArray(expirations)) expirations=[];
-
-
-let scanner = null;
-let scannerTarget = "main";
-let scannerRunning = false;
-let pendingImageData = "";
-let currentClientId = null;
-
-
-const $ = id => document.getElementById(id);
-const normalizeCode = v => String(v || "").replace(/\D/g,"").trim();
-
-
-function saveAll(){
-  writeStore(STORAGE_KEY, products);
-  
-function exportData(){
-  const payload = {
-    version: 2,
-    exportedAt: new Date().toISOString(),
-    products, clients, expirations
-  };
-  const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href=url; a.download="backup-catalogo-produtos.json"; a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
-  showStatus($("dataStatus"),"Backup exportado com sucesso.","ok");
+function showConfirm(p){
+ document.getElementById('modalContent').innerHTML=p.name?
+ `<img src="${esc(p.image||'')}" onerror="this.style.display='none'"><p><b>${esc(p.name)}</b></p><p>Código: <b>${esc(p.code)}</b></p><p>Encontramos uma possível correspondência na internet.</p>`:
+ `<p><b>${esc(p.code)}</b></p><p class="muted">Não encontramos o produto automaticamente. Você poderá preencher o nome e a imagem depois.</p>`;
+ document.getElementById('modal').style.display='flex';
 }
-$("exportDataBtn").onclick=exportData;
-$("importDataBtn").onclick=()=>$("importDataFile").click();
-$("importDataFile").addEventListener("change", async e=>{
-  const file=e.target.files?.[0]; if(!file)return;
-  try{
-    const data=JSON.parse(await file.text());
-    if(!Array.isArray(data.products)||!Array.isArray(data.clients)||!Array.isArray(data.expirations)) throw new Error("Formato inválido");
-    if(!confirm("Importar este backup substituirá os dados atuais deste navegador. Continuar?")) return;
-    products=data.products; clients=data.clients; expirations=data.expirations;
-    saveAll(); saveClients(); saveExpirations();
-    showStatus($("dataStatus"),"Backup importado com sucesso.","ok");
-  }catch(err){ showStatus($("dataStatus"),"Não foi possível importar o backup.","err"); }
-  e.target.value="";
-});
-
-renderList(); updateProductSelect(); populateLabelProducts();
+function confirmScan(ok){
+ document.getElementById('modal').style.display='none';
+ if(ok){fillForm(pending);stopScanner()}
+ else{pending=null; if(document.getElementById('scanner').style.display!=='none') startScanner()}
 }
-function saveClients(){
-  writeStore(CLIENTS_KEY, clients);
-  renderClients(); renderHomeExpirations();
+function fillForm(p){document.getElementById('code').value=p.code;document.getElementById('name').value=p.name||'';document.getElementById('image').value=p.image||'';document.getElementById('qty').value=1}
+function addProduct(){
+ const code=document.getElementById('code').value.trim(); if(!code){alert('Informe o código.');return}
+ const p={code,name:document.getElementById('name').value.trim()||'Produto sem nome',image:document.getElementById('image').value.trim(),qty:Math.max(1,Number(document.getElementById('qty').value)||1)};
+ const old=items.find(x=>x.code===code);
+ if(old) old.qty+=p.qty; else items.push(p);
+ known[code]={code:p.code,name:p.name,image:p.image}; save(); render();
+ document.getElementById('code').value='';document.getElementById('name').value='';document.getElementById('image').value='';document.getElementById('qty').value=1;
 }
-function saveExpirations(){
-  writeStore(EXPIRATIONS_KEY, expirations);
-  renderClientExpirations(); renderHomeExpirations();
+function manualCode(){const c=prompt('Digite o código de barras:');if(c)processCode(c)}
+async function startScanner(){
+ if(scanner){return}
+ document.getElementById('scanner').style.display='block';
+ scanner=new Html5Qrcode("reader");
+ try{
+  await scanner.start({facingMode:{exact:"environment"}},{fps:10,qrbox:{width:280,height:120}},code=>{scanner.pause(true);processCode(code)},()=>{});
+ }catch(e){
+  try{await scanner.start({facingMode:"environment"},{fps:10,qrbox:{width:280,height:120}},code=>{scanner.pause(true);processCode(code)},()=>{})}
+  catch(err){alert('Não foi possível abrir a câmera. Verifique a permissão do navegador.');scanner=null;document.getElementById('scanner').style.display='none'}
+ }
 }
-
-
-function showStatus(el, msg, type="ok"){
-  el.textContent = msg;
-  el.className = "status show " + type;
-}
-function hideStatus(el){ el.className = "status"; el.textContent=""; }
-
-
-function findProduct(code){
-  code = normalizeCode(code);
-  return products.find(p => normalizeCode(p.code) === code);
-}
-
-
-function goPage(name){
-  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
-  $("page-"+name).classList.add("active");
-  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active", b.dataset.page===name));
-  
-  if(name==="list") renderList();
-  if(name==="validities") {
-    $("view-client-details").classList.add("hidden");
-    $("view-clients").classList.remove("hidden");
-    renderClients();
-  }
-  if(name==="scan") renderHomeExpirations();
-}
-
-
-document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>goPage(b.dataset.page)));
-
-
-async function lookupOnline(code){
-  code = normalizeCode(code);
-  if(!code) return null;
-  try{
-    const r = await fetch("https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json", {headers:{Accept:"application/json"}});
-    if(!r.ok) return null;
-    const d = await r.json();
-    if(d.status !== 1 || !d.product) return null;
-    const p = d.product;
-    return {
-      name: p.product_name || p.product_name_pt || p.generic_name || "",
-      image: p.image_front_url || p.image_url || ""
-    };
-  }catch(e){ return null; }
-}
-
-
-function fillRegister(code, online){
-  $("regCode").value = code;
-  if(online){
-    if(online.name) $("regName").value = online.name;
-    if(online.image && !pendingImageData) {
-      $("regPreview").src = online.image;
-      $("regPreview").style.display = "block";
-      $("regPreview").dataset.remote = online.image;
-    }
-  }
-}
-
-
-async function processCode(code, target){
-  code = normalizeCode(code);
-  if(!code) return;
-  const local = findProduct(code);
-
-
-  if(target === "register"){
-    $("regCode").value = code;
-    if(local){
-      showStatus($("regStatus"), 'produto ja cadastrado "' + local.name + '"', "warn");
-      $("regName").value = local.name || "";
-      if(local.image){ $("regPreview").src=local.image; $("regPreview").style.display="block"; }
-      return;
-    }
-    showStatus($("regStatus"), "Código lido. Buscando o produto na internet...", "ok");
-    const online = await lookupOnline(code);
-    if(online){
-      fillRegister(code, online);
-      showStatus($("regStatus"), online.name ? "Produto encontrado e preenchido automaticamente." : "Produto encontrado, mas sem nome disponível.", "ok");
-    }else{
-      showStatus($("regStatus"), "Código lido. Não encontrei o produto na internet; digite o nome para cadastrar.", "warn");
-    }
-    goPage("register");
-    return;
-  }
-
-
-  $("mainCode").value = code;
-  if(local){
-    renderMainLocal(local);
-    return;
-  }
-  showStatus($("mainStatus"), "Consultando o produto na internet...", "ok");
-  const online = await lookupOnline(code);
-  if(online){
-    $("mainResult").classList.remove("hidden");
-    $("mainResult").innerHTML = `
-      <h3>Produto encontrado</h3>
-      <div class="product">
-        ${online.image ? `<img src="${escapeHtml(online.image)}" alt="">` : `<div style="width:76px;height:76px;background:#e5e7eb;border-radius:10px"></div>`}
-        <div><strong>${escapeHtml(online.name || "Sem nome")}</strong><div class="meta">Código: ${escapeHtml(code)}</div></div>
-      </div>
-      <button class="primary big" style="margin-top:12px" id="useFoundProduct">➕ Cadastrar este produto</button>`;
-    $("useFoundProduct").onclick=()=>{
-      goPage("register");
-      fillRegister(code, online);
-      hideStatus($("regStatus"));
-    };
-    showStatus($("mainStatus"), "Produto encontrado.", "ok");
-  }else{
-    $("mainResult").classList.remove("hidden");
-    $("mainResult").innerHTML = `<h3>Produto não encontrado</h3><p class="small">Não encontrei esse código na internet. Você pode cadastrar manualmente.</p><button class="primary big" id="registerUnknown">➕ Cadastrar produto</button>`;
-    $("registerUnknown").onclick=()=>{goPage("register");$("regCode").value=code;};
-    showStatus($("mainStatus"), "Não encontrei esse produto na internet.", "warn");
-  }
-}
-
-
-function renderMainLocal(p){
-  $("mainResult").classList.remove("hidden");
-  $("mainResult").innerHTML = `
-    <div class="status show warn">produto ja cadastrado "${escapeHtml(p.name)}"</div>
-    <div class="product">
-      ${p.image ? `<img src="${escapeHtml(p.image)}" alt="">` : `<div style="width:76px;height:76px;background:#e5e7eb;border-radius:10px"></div>`}
-      <div><strong>${escapeHtml(p.name)}</strong><div class="meta">Código: ${escapeHtml(p.code)}</div></div>
-    </div>`;
-  hideStatus($("mainStatus"));
-}
-
-
-$("lookupMain").onclick=()=>processCode($("mainCode").value,"main");
-$("mainCode").addEventListener("keydown",e=>{if(e.key==="Enter")processCode(e.target.value,"main")});
-$("lookupRegister").onclick=async()=>{
-  const code=normalizeCode($("regCode").value);
-  if(!code){showStatus($("regStatus"),"Digite ou escaneie um código.","warn");return;}
-  await processCode(code,"register");
-};
-
-
-async function handleImageFile(file){
-  if(!file)return;
-  try{
-    pendingImageData=await compressImage(file);
-    $("regPreview").src=pendingImageData;
-    $("regPreview").style.display="block";
-    delete $("regPreview").dataset.remote;
-    showStatus($("regStatus"),"Foto adicionada ao cadastro.","ok");
-  }catch(err){showStatus($("regStatus"),"Não foi possível carregar a imagem.","err")}
-}
-
-
-$("takePhoto").onclick=()=>$("regCamera").click();
-$("choosePhoto").onclick=()=>$("regImage").click();
-$("regCamera").addEventListener("change", async e=>{
-  await handleImageFile(e.target.files?.[0]);
-  e.target.value="";
-});
-$("regImage").addEventListener("change", async e=>{
-  await handleImageFile(e.target.files?.[0]);
-});
-
-
-function compressImage(file){
-  return new Promise((resolve,reject)=>{
-    const img=new Image(), url=URL.createObjectURL(file);
-    img.onload=()=>{
-      const max=900, scale=Math.min(1,max/Math.max(img.width,img.height));
-      const c=document.createElement("canvas");
-      c.width=Math.max(1,Math.round(img.width*scale)); c.height=Math.max(1,Math.round(img.height*scale));
-      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-      URL.revokeObjectURL(url);
-      resolve(c.toDataURL("image/jpeg",.8));
-    };
-    img.onerror=reject; img.src=url;
-  });
-}
-
-
-$("saveRegister").onclick=()=>{
-  const code=normalizeCode($("regCode").value);
-  const name=$("regName").value.trim();
-  if(!code){showStatus($("regStatus"),"Informe ou escaneie o código de barras.","warn");return;}
-  const existing=findProduct(code);
-  if(existing){showStatus($("regStatus"),'produto ja cadastrado "'+existing.name+'"',"warn");return;}
-  if(!name){showStatus($("regStatus"),"Informe o nome do produto.","warn");return;}
-  const img=pendingImageData || $("regPreview").dataset.remote || "";
-  products.push({id:crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),code,name,image:img,createdAt:new Date().toISOString()});
-  saveAll();
-  showStatus($("regStatus"),'Produto cadastrado: "'+name+'"',"ok");
-  $("regName").value=""; $("regCode").value=""; $("regImage").value=""; pendingImageData="";
-  $("regPreview").style.display="none"; delete $("regPreview").dataset.remote;
-};
-
-
-function renderList(){
-  const q=$("listSearch").value.trim().toLowerCase();
-  const arr=products.filter(p=>!q || p.name.toLowerCase().includes(q) || p.code.includes(q));
-  if(!arr.length){$("productList").innerHTML='<div class="empty">Nenhum produto cadastrado.</div>';return;}
-  $("productList").innerHTML=arr.map(p=>`
-    <div class="product">
-      ${p.image?`<img src="${escapeHtml(p.image)}" alt="">`:`<div style="width:76px;height:76px;background:#e5e7eb;border-radius:10px"></div>`}
-      <div><strong>${escapeHtml(p.name)}</strong><div class="meta">${escapeHtml(p.code)}</div>
-      <button class="danger" style="margin-top:7px;padding:7px 10px;font-size:12px" data-delete="${escapeHtml(p.id)}">Excluir</button></div>
-    </div>`).join("");
-  document.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>{
-    const p=products.find(x=>x.id===b.dataset.delete);
-    if(p && confirm('Excluir "'+p.name+'"?\\nAs validades vinculadas também serão removidas.')){
-      products=products.filter(x=>x.id!==p.id);
-      expirations=expirations.filter(e=>normalizeCode(e.productCode)!==normalizeCode(p.code));
-      saveAll(); saveExpirations();
-    }
-  });
-}
-$("listSearch").addEventListener("input",renderList);
-
-
-function renderClients(){
-  const list = $("clientList");
-  if(!clients.length){ list.innerHTML='<div class="empty">Nenhum cliente cadastrado.</div>'; return; }
-  list.innerHTML = clients.map(c => `
-    <div class="list-item" onclick="openClient('${c.id}')">
-      <strong>👤 ${escapeHtml(c.name)}</strong>
-      <button class="danger" style="padding:6px 10px; font-size:12px" onclick="event.stopPropagation(); deleteClient('${c.id}')">Apagar</button>
-    </div>
-  `).join("");
-}
-
-
-$("addClientBtn").onclick = () => {
-  const name = $("newClientName").value.trim();
-  if(!name) return;
-  clients.push({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), name });
-  $("newClientName").value = "";
-  saveClients();
-};
-
-
-function deleteClient(id){
-  if(!confirm("Excluir cliente e todas as suas validades vinculadas?")) return;
-  clients = clients.filter(c => c.id !== id);
-  expirations = expirations.filter(e => e.clientId !== id);
-  saveClients();
-  saveExpirations();
-}
-
-
-function openClient(id){
-  currentClientId = id;
-  const c = clients.find(x => x.id === id);
-  if(!c) return;
-  $("currentClientTitle").textContent = "👤 Cliente: " + c.name;
-  $("view-clients").classList.add("hidden");
-  $("view-client-details").classList.remove("hidden");
-  updateProductSelect();
-  renderClientExpirations();
-}
-
-
-$("backToClients").onclick = () => {
-  $("view-client-details").classList.add("hidden");
-  $("view-clients").classList.remove("hidden");
-  currentClientId = null;
-};
-
-
-function updateProductSelect(){
-  const sel = $("expProduct");
-  const previous = sel.value;
-  if(!products.length){
-    sel.innerHTML = '<option value="">Cadastre produtos no catálogo primeiro</option>';
-    renderExpProductPreview();
-    return;
-  }
-  sel.innerHTML = '<option value="">Selecione um produto...</option>' +
-    products.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'))
-      .map(p => `<option value="${escapeHtml(p.code)}">${escapeHtml(p.name)} — ${escapeHtml(p.code)}</option>`).join("");
-  if(products.some(p=>p.code===previous)) sel.value=previous;
-  renderExpProductPreview();
-}
-
-function renderExpProductPreview(){
-  const box = $("expProductPreview");
-  if(!box) return;
-  const p = findProduct($("expProduct").value);
-  if(!p){ box.className="product hidden"; box.innerHTML=""; return; }
-  box.className="product";
-  box.innerHTML = `${p.image ? `<img src="${escapeHtml(p.image)}" alt="">` :
-    `<div style="width:76px;height:76px;background:#e5e7eb;border-radius:10px"></div>`}
-    <div><strong>${escapeHtml(p.name)}</strong><div class="meta">Código: ${escapeHtml(p.code)}</div>
-    <div class="small">A foto do catálogo será reutilizada neste vínculo.</div></div>`;
-}
-
-function openQuickProduct(){
-  goPage("register");
-  $("regCode").focus();
-  showStatus($("regStatus"), "Cadastre o produto. Depois volte ao cliente para adicionar a validade.", "ok");
-}
-
-function productAlreadyLinked(clientId, productCode){
-  return expirations.some(e => e.clientId===clientId && normalizeCode(e.productCode)===normalizeCode(productCode));
-}
-
-$("expProduct").addEventListener("change", renderExpProductPreview);
-$("openQuickProduct").onclick = openQuickProduct;
-
-$("addExpBtn").onclick = () => {
-  const code = normalizeCode($("expProduct").value);
-  const date = $("expDate").value;
-  if(!currentClientId){ alert("Selecione um cliente primeiro."); return; }
-  if(!code){ alert("Selecione um produto."); return; }
-  if(!date){ alert("Selecione a data de vencimento."); return; }
-
-  // O mesmo produto pode existir em vários clientes. Dentro do mesmo cliente,
-  // atualizar a validade evita registros duplicados e preserva o produto do catálogo.
-  const existing = expirations.find(e => e.clientId===currentClientId && normalizeCode(e.productCode)===code);
-  if(existing){
-    if(!confirm("Este produto já está neste cliente. Deseja atualizar a data de validade?")) return;
-    existing.date = date;
-  }else{
-    expirations.push({
-      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-      clientId: currentClientId,
-      productCode: code,
-      date
-    });
-  }
-  $("expDate").value = "";
-  saveExpirations();
-};
-
-function deleteExp(id){
-  if(!confirm("Remover esta validade?")) return;
-  expirations = expirations.filter(e => e.id !== id);
-  saveExpirations();
-}
-
-
-function renderHomeExpirations(){
-  const list = $("homeExpirationsList");
-  const sorted = [...expirations].sort((a,b) => new Date(a.date+"T00:00:00") - new Date(b.date+"T00:00:00"));
-  const today = new Date(); today.setHours(0,0,0,0);
-  const horizon = new Date(today); horizon.setDate(horizon.getDate()+30);
-  const relevant = sorted.filter(e => {
-    const d = new Date(e.date+"T00:00:00");
-    return d <= horizon;
-  });
-
-
-  if(!relevant.length) {
-    list.innerHTML = '<div class="empty">Nenhum produto vencido ou com vencimento nos próximos 30 dias.</div>';
-    return;
-  }
-
-  list.innerHTML = relevant.slice(0, 20).map(e => {
-    const p = findProduct(e.productCode) || {name: "Produto Excluído"};
-    const c = clients.find(x => x.id === e.clientId) || {name: "Cliente Excluído"};
-    
-    const expDateObj = new Date(e.date + "T00:00:00");
-    const dStr = expDateObj.toLocaleDateString('pt-BR');
-    
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const diffTime = expDateObj - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    
-    let color = "var(--text)";
-    let warning = "";
-    if (diffDays < 0) { color = "var(--danger)"; warning = " (Vencido!)"; }
-    else if (diffDays <= 7) { color = "#92400e"; warning = ` (Faltam ${diffDays} dias)`; }
-    else if (diffDays <= 30) { color = "#166534"; warning = ` (Faltam ${diffDays} dias)`; }
-
-
-    return `
-      <div class="list-item" style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
-        <strong style="font-size:15px">${escapeHtml(p.name)}</strong>
-        <div style="font-size:13px; color:var(--muted)">👤 Cliente: <strong>${escapeHtml(c.name)}</strong></div>
-        <div style="font-size:13px; color:${color}; font-weight:bold;">⏳ Vence em: ${dStr}${warning}</div>
-      </div>
-    `;
-  }).join("");
-}
-
-
-function escapeHtml(s){
-  return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
-}
-
-
-async function ensureCameraPermission(){
-  if(!window.isSecureContext || !navigator.mediaDevices?.getUserMedia){
-    throw new Error("CAMERA_SECURE");
-  }
-  const stream=await navigator.mediaDevices.getUserMedia({
-    video:{facingMode:{ideal:"environment"}},audio:false
-  });
-  stream.getTracks().forEach(t=>t.stop());
-}
-
-
-async function startScanner(target){
-  scannerTarget=target;
-  $("scannerModal").classList.add("open");
-  hideStatus($("scanStatus"));
-  $("reader").innerHTML="";
-  if(!window.Html5Qrcode){
-    showStatus($("scanStatus"),"O leitor não carregou. Verifique a internet e tente novamente.","err");return;
-  }
-  try{
-    showStatus($("scanStatus"),"Solicitando acesso à câmera...","ok");
-    await ensureCameraPermission();
-
-
-    scanner=new Html5Qrcode("reader");
-    scannerRunning=true;
-    await scanner.start(
-      {facingMode:"environment"},
-      {fps:10,qrbox:{width:280,height:140}},
-      async decoded=>{
-        const code=normalizeCode(decoded);
-        if(!code)return;
-        const targetNow=scannerTarget;
-        await stopScanner();
-        await processCode(code,targetNow);
-      },
-      ()=>{}
-    );
-    showStatus($("scanStatus"),"Câmera ativa. Aponte para o código de barras.","ok");
-  }catch(e){
-    scannerRunning=false;
-    console.error("Erro ao iniciar câmera/leitor:",e);
-    let msg="Não consegui abrir a câmera.";
-    if(e?.message==="CAMERA_SECURE") msg="O site não está em HTTPS. Abra o endereço HTTPS do GitHub Pages.";
-    else if(e?.name==="NotAllowedError") msg="O navegador negou o acesso à câmera. Confira a permissão deste site nas configurações do navegador.";
-    else if(e?.name==="NotFoundError") msg="Nenhuma câmera foi encontrada neste aparelho.";
-    else if(e?.name==="NotReadableError") msg="A câmera está ocupada por outro aplicativo. Feche a câmera, WhatsApp, Instagram ou outro app que possa estar usando-a e tente novamente.";
-    else if(e?.name==="OverconstrainedError") msg="O navegador não conseguiu selecionar a câmera traseira. Tente novamente ou use outro navegador.";
-    else if(e?.name==="AbortError") msg="O navegador interrompeu a abertura da câmera. Tente novamente.";
-    else if(e?.message) msg += " ("+e.message+")";
-    showStatus($("scanStatus"),msg,"err");
-    if(scanner){try{await scanner.clear()}catch(_){} scanner=null;}
-  }
-}
-
-
 async function stopScanner(){
-  if(scanner){
-    try{if(scannerRunning) await scanner.stop()}catch(_){}
-    try{await scanner.clear()}catch(_){}
-  }
-  scanner=null; scannerRunning=false;
-  $("reader").innerHTML="";
-  $("scannerModal").classList.remove("open");
+ if(scanner){try{await scanner.stop();}catch(e){}try{scanner.clear()}catch(e){}scanner=null}
+ document.getElementById('scanner').style.display='none';
 }
-
-
-$("openScanMain").onclick=()=>startScanner("main");
-$("openScanRegister").onclick=()=>startScanner("register");
-$("closeScanner").onclick=stopScanner;
-$("retryScanner").onclick=async()=>{await stopScanner();await startScanner(scannerTarget)};
-window.addEventListener("beforeunload",()=>{if(scanner)try{scanner.stop()}catch(_){}});
-
-
-renderList();
-renderClients();
-renderHomeExpirations();
-
-
-// =========================
-// ALGORITMO DE BUSCA APROXIMADA (FUZZY SEARCH / LEVENSHTEIN)
-// =========================
-function levenshteinDistance(a, b) {
-  a = a.toLowerCase();
-  b = b.toLowerCase();
-  const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
-  for (let i = 0; i <= a.length; i += 1) matrix[0][i] = i;
-  for (let j = 0; j <= b.length; j += 1) matrix[j][0] = j;
-  for (let j = 1; j <= b.length; j += 1) {
-    for (let i = 1; i <= a.length; i += 1) {
-      const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
-      matrix[j][i] = Math.min(
-        matrix[j][i - 1] + 1,
-        matrix[j - 1][i] + 1,
-        matrix[j - 1][i - 1] + indicator
-      );
-    }
-  }
-  return matrix[b.length][a.length];
+function finishRetirada(){
+ if(!items.length){alert('Adicione pelo menos um produto.');return}
+ const rec={id:Date.now(),date:new Date().toLocaleString('pt-BR'),items:JSON.parse(JSON.stringify(items))};
+ history.unshift(rec);items=[];save();render();alert('Retirada salva no histórico.');showTab('historico');
 }
-
-
-function calculateFuzzyScore(text, query) {
-  if (!query) return { isMatch: true, score: 0 };
-  text = text.toLowerCase().trim();
-  query = query.toLowerCase().trim();
-
-
-  // 1. Match exato ou substring exata (prioridade máxima)
-  if (text === query) return { isMatch: true, score: 1000 };
-  if (text.startsWith(query)) return { isMatch: true, score: 800 - (text.length - query.length) };
-  if (text.includes(query)) return { isMatch: true, score: 600 - text.indexOf(query) };
-
-
-  // 2. Busca por palavras individuais ou tolerância Levenshtein
-  const textWords = text.split(/\s+/);
-  const queryWords = query.split(/\s+/);
-
-
-  let bestWordScore = 0;
-  for (const qWord of queryWords) {
-    if (!qWord) continue;
-    let minDistance = 999;
-    for (const tWord of textWords) {
-      const dist = levenshteinDistance(tWord, qWord);
-      if (dist < minDistance) minDistance = dist;
-    }
-    // Permite erros com base no tamanho da palavra buscada
-    const maxAllowedDist = qWord.length <= 3 ? 1 : (qWord.length <= 6 ? 2 : 3);
-    if (minDistance <= maxAllowedDist) {
-      bestWordScore += (100 - minDistance * 25);
-    }
-  }
-
-
-  // 3. Tolerância de erro na palavra inteira
-  const fullDist = levenshteinDistance(text, query);
-  const maxAllowedFullDist = query.length <= 4 ? 1 : (query.length <= 8 ? 2 : 3);
-  if (fullDist <= maxAllowedFullDist) {
-    const fullScore = 150 - fullDist * 30;
-    if (fullScore > bestWordScore) bestWordScore = fullScore;
-  }
-
-
-  return { isMatch: bestWordScore > 0, score: bestWordScore };
+function clearCurrent(){if(confirm('Limpar todos os itens da retirada atual?')){items=[];save();render()}}
+function renderHistory(){
+ const el=document.getElementById('history');
+ if(!history.length){el.innerHTML='<div class="empty">Nenhuma retirada salva.</div>';return}
+ el.innerHTML=history.map((r,i)=>`<div class="card"><b>Retirada #${String(r.id).slice(-6)}</b><br><small>${esc(r.date)}</small><br>${r.items.length} produtos • ${r.items.reduce((a,p)=>a+Number(p.qty),0)} unidades<br><div class="actions" style="margin-top:8px"><button class="primary" onclick="exportRecordPDF(${i})">PDF</button><button class="secondary" onclick="exportRecordTXT(${i})">TXT</button><button class="danger" onclick="deleteHistory(${i})">Excluir</button></div></div>`).join('');
 }
-
-
-// =========================
-// GERADOR DE ETIQUETAS EAN-13
-// =========================
-function isValidEAN13(code){
-  code=normalizeCode(code);
-  if(!/^\d{13}$/.test(code)) return false;
-  let sum=0;
-  for(let i=0;i<12;i++) sum += Number(code[i]) * (i%2===0 ? 1 : 3);
-  const check=(10-(sum%10))%10;
-  return check===Number(code[12]);
+function renderKnown(){
+ const el=document.getElementById('known');let arr=Object.values(known);
+ el.innerHTML=arr.length?arr.map(p=>`<div class="product"><img src="${esc(p.image||'')}" onerror="this.style.visibility='hidden'"><div><b>${esc(p.name||'Sem nome')}</b><br><small>${esc(p.code)}</small></div></div>`).join(''):'<div class="empty">Nenhum produto conhecido.</div>';
 }
-
-
-function ean13Svg(code){
-  code=normalizeCode(code);
-  if(!isValidEAN13(code)) return '';
-  const L=[
-    '0001101','0011001','0010011','0111101','0100011','0110001','0101111','0111011','0110111','0001011'
-  ];
-  const G=[
-    '0100111','0110011','0011011','0100001','0011101','0111001','0000101','0010001','0001001','0010111'
-  ];
-  const R=[
-    '1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'
-  ];
-  const parity=[
-    'LLLLLL','LLGLGG','LLGGLG','LLGGGL','LGLLGG','LGGLLG','LGGGLL','LGLGLG','LGLGGL','LGGLGL'
-  ][Number(code[0])];
-  let bits='101';
-  for(let i=1;i<=6;i++) bits += parity[i-1]==='L'?L[Number(code[i])]:G[Number(code[i])];
-  bits+='01010';
-  for(let i=7;i<=12;i++) bits+=R[Number(code[i])];
-  bits+='101';
-  const module=2.2, quiet=11, width=(bits.length+quiet*2)*module, height=70;
-  let rects='';
-  for(let i=0;i<bits.length;i++) if(bits[i]==='1') rects+=`<rect x="${((i+quiet)*module).toFixed(2)}" y="0" width="${module.toFixed(2)}" height="${height}"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width.toFixed(2)} ${height}" role="img" aria-label="Código de barras EAN-13 ${code}"><rect width="100%" height="100%" fill="white"/>${rects}</svg>`;
+function deleteHistory(i){if(confirm('Excluir esta retirada?')){history.splice(i,1);save();renderHistory()}}
+function txtFor(arr,date){
+ let s='RETIRADA DE ESTOQUE\\nData: '+date+'\\n\\n';
+ arr.forEach((p,i)=>s+=String(i+1).padStart(2,'0')+' - '+p.name+'\\nCódigo: '+p.code+'\\nQuantidade: '+p.qty+'\\n\\n');
+ s+='TOTAL DE UNIDADES: '+arr.reduce((a,p)=>a+Number(p.qty),0)+'\\nPRODUTOS: '+arr.length+'\\n';return s;
 }
-
-
-function updateLabelProductInfo(){
-  const code=$("labelProduct").value;
-  const p=findProduct(code);
-  const info=$("labelProductInfo");
-  if(!p){
-    info.textContent=products.length?"Selecione um produto.":"Nenhum produto cadastrado no estoque.";
-    info.className="status show warn";
-    return;
-  }
-  if(!isValidEAN13(p.code)){
-    info.textContent=`${p.name}: o código ${p.code} não é um EAN-13 válido. Cadastre um código de 13 dígitos com dígito verificador correto.`;
-    info.className="status show err";
-    return;
-  }
-  info.textContent=`${p.name} — EAN-13: ${p.code}`;
-  info.className="status show ok";
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function exportTXT(){download(new Blob([txtFor(items,new Date().toLocaleString('pt-BR'))],{type:'text/plain;charset=utf-8'}),'retirada.txt')}
+function exportRecordTXT(i){const r=history[i];download(new Blob([txtFor(r.items,r.date)],{type:'text/plain;charset=utf-8'}),'retirada-'+r.id+'.txt')}
+function exportCSV(){let s='Código;Produto;Quantidade;Imagem\\n'+items.map(p=>`"${p.code}";"${p.name.replace(/"/g,'""')}";${p.qty};"${p.image||''}"`).join('\\n');download(new Blob(['\\ufeff'+s],{type:'text/csv;charset=utf-8'}),'retirada.csv')}
+function pdfLib(){return new Promise((resolve,reject)=>{if(window.jspdf)return resolve();let s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';s.onload=resolve;s.onerror=reject;document.head.appendChild(s)})}
+async function makePDF(arr,date,file){
+ try{await pdfLib();const {jsPDF}=window.jspdf;const doc=new jsPDF();doc.setFontSize(16);doc.text('RETIRADA DE ESTOQUE',14,18);doc.setFontSize(10);doc.text('Data: '+date,14,26);let y=38;
+ for(const p of arr){if(y>265){doc.addPage();y=18} if(p.image){try{const im=await toDataURL(p.image);doc.addImage(im,'JPEG',14,y-6,18,18)}catch(e){}}
+  doc.setFontSize(10);doc.text((p.name||'Produto').slice(0,45),36,y);doc.text('Código: '+p.code,36,y+6);doc.text('Quantidade: '+p.qty,36,y+12);y+=27}
+ doc.text('Total de unidades: '+arr.reduce((a,p)=>a+Number(p.qty),0),14,y);doc.save(file)}
+ catch(e){alert('Não foi possível gerar o PDF. Tente novamente.')}
 }
-
-
-function populateLabelProducts(filteredProducts = null){
-  const sel=$("labelProduct");
-  const valid = (filteredProducts || products).filter(p=>isValidEAN13(p.code));
-  if(!valid.length){
-    sel.innerHTML='<option value="">Nenhum EAN-13 válido encontrado</option>';
-    if(!filteredProducts) $("labelsPreview").innerHTML='<div class="empty">Cadastre produtos com EAN-13 válido para gerar etiquetas.</div>';
-    updateLabelProductInfo();
-    return;
-  }
-  const current=sel.value;
-  sel.innerHTML='<option value="">Selecione um produto...</option>'+valid.map(p=>`<option value="${escapeHtml(p.code)}">${escapeHtml(p.name)} — ${escapeHtml(p.code)}</option>`).join('');
-  if(valid.some(p=>p.code===current)) sel.value=current;
-  else if(valid.length === 1) sel.value = valid[0].code; // Seleciona automaticamente se só houver 1 resultado
-  updateLabelProductInfo();
-}
-
-
-function handleLabelSearch(){
-  const query = $("labelSearchInput").value.trim();
-  const resultsContainer = $("labelSearchResultsList");
-
-
-  if (!query) {
-    resultsContainer.style.display = "none";
-    resultsContainer.innerHTML = "";
-    populateLabelProducts();
-    return;
-  }
-
-
-  const validProducts = products.filter(p => isValidEAN13(p.code));
-  const matches = [];
-
-
-  for (const p of validProducts) {
-    const res = calculateFuzzyScore(p.name + " " + p.code, query);
-    if (res.isMatch) {
-      matches.push({ product: p, score: res.score });
-    }
-  }
-
-
-  matches.sort((a, b) => b.score - a.score);
-
-
-  if (!matches.length) {
-    resultsContainer.innerHTML = '<div style="padding:12px; color:var(--muted); text-align:center; font-size:13px;">Nenhum produto encontrado para "' + escapeHtml(query) + '"</div>';
-    resultsContainer.style.display = "block";
-    populateLabelProducts([]);
-    return;
-  }
-
-
-  // Preenche o Select ordenado por relevância
-  const sortedProducts = matches.map(m => m.product);
-  populateLabelProducts(sortedProducts);
-  if (sortedProducts.length > 0) {
-    $("labelProduct").value = sortedProducts[0].code;
-    updateLabelProductInfo();
-    generateLabels();
-  }
-
-
-  // Renderiza a lista de sugestões suspensa
-  resultsContainer.innerHTML = matches.map(m => `
-    <div class="search-suggestion-item" data-code="${escapeHtml(m.product.code)}" data-name="${escapeHtml(m.product.name)}">
-      <div>
-        <strong>${escapeHtml(m.product.name)}</strong>
-        <div style="font-size:11px; color:var(--muted);">${escapeHtml(m.product.code)}</div>
-      </div>
-      <span class="match-score">Relevância: ${Math.round(m.score)}</span>
-    </div>
-  `).join("");
-  resultsContainer.style.display = "block";
-
-
-  // Evento ao clicar em uma sugestão
-  resultsContainer.querySelectorAll(".search-suggestion-item").forEach(item => {
-    item.addEventListener("click", () => {
-      const code = item.dataset.code;
-      const name = item.dataset.name;
-      $("labelProduct").value = code;
-      $("labelSearchInput").value = name;
-      resultsContainer.style.display = "none";
-      updateLabelProductInfo();
-      generateLabels();
-    });
-  });
-}
-
-
-$("labelSearchInput").addEventListener("input", handleLabelSearch);
-
-
-// Fecha a lista suspensa ao clicar fora
-document.addEventListener("click", (e) => {
-  if (!e.target.closest("#labelSearchInput") && !e.target.closest("#labelSearchResultsList")) {
-    $("labelSearchResultsList").style.display = "none";
-  }
-});
-
-
-function generateLabels(){
-  const p=findProduct($("labelProduct").value);
-  const qty=Math.max(1,Math.min(200,parseInt($("labelQty").value,10)||1));
-  if(!p){showStatus($("labelStatus"),"Selecione um produto do estoque.","warn");return;}
-  if(!isValidEAN13(p.code)){showStatus($("labelStatus"),"Este produto não possui um EAN-13 válido.","err");return;}
-  $("labelQty").value=qty;
-  $("labelsPreview").innerHTML=Array.from({length:qty},()=>`<div class="barcode-label"><div class="label-name">${escapeHtml(p.name)}</div>${ean13Svg(p.code)}<div class="label-code">${escapeHtml(p.code)}</div></div>`).join('');
-  showStatus($("labelStatus"),`${qty} etiqueta(s) gerada(s) para "${p.name}".`,"ok");
-}
-
-
-$("labelProduct").addEventListener("change",()=>{updateLabelProductInfo();generateLabels();});
-$("generateLabelsBtn").onclick=generateLabels;
-$("printLabelsBtn").onclick=()=>{
-  if(!$("labelsPreview").children.length || $("labelsPreview").querySelector('.empty')) generateLabels();
-  setTimeout(()=>window.print(),100);
-};
-
-
-populateLabelProducts();
+function toDataURL(url){return fetch(url).then(r=>r.blob()).then(b=>new Promise((res,rej)=>{let rd=new FileReader();rd.onload=()=>res(rd.result);rd.onerror=rej;rd.readAsDataURL(b)}))}
+function saveAndExport(type){if(!items.length){alert('Adicione produtos.');return}makePDF(items,new Date().toLocaleString('pt-BR'),'retirada.pdf')}
+function exportRecordPDF(i){const r=history[i];makePDF(r.items,r.date,'retirada-'+r.id+'.pdf')}
+render();renderHistory();renderKnown();
 </script>
-</div>
-
-
 </body>
 </html>
